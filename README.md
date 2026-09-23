@@ -88,7 +88,7 @@ Setup adds three skills to your project, so Claude Code follows them whenever it
 
 - [video-rules](.claude/skills/video-rules/SKILL.md): story structure, the "AI look" to avoid, text, UI, data, CTA, length and formats.
 - [motion-direction](.claude/skills/motion-direction/SKILL.md): how to direct and build real motion design in Remotion: a virtual camera, depth planes, match cuts and palette impacts, and a workflow of three directions → beat sheet → approved styleframes before anything is animated.
-- [sound-design](.claude/skills/sound-design/SKILL.md): a soft music bed, a real sound for every click, keystroke and transition, mixing levels, and an audio sample you approve before the full render.
+- [sound-design](.claude/skills/sound-design/SKILL.md): a soft music bed, a real sound for every click, keystroke and transition, mixing levels, and an audio sample you approve before the full render. Setup also adds a [library of 37 CC0 sound effects](sfx/LICENSE.md) to `public/sfx/` and `<Sfx>` / `<MusicBed>` helpers to `src/coldframe-sound.tsx`.
 
 The short version:
 
@@ -176,6 +176,8 @@ templates/coldframe.yml        what setup adds to your project
 .claude/skills/video-rules/    Claude Code skill: how to make videos that don't look AI-made
 .claude/skills/motion-direction/ Claude Code skill: camera, depth, transitions, styleframes-first workflow
 .claude/skills/sound-design/   Claude Code skill: music bed, a sound for every action, loudness
+sfx/                           CC0 sound-effect library (setup copies it to public/sfx/)
+templates/sound.tsx            <Sfx> and <MusicBed> helpers (setup copies it to src/coldframe-sound.tsx)
 example/                       the Remotion demo project
 docs/                          the website (GitHub Pages)
 ```

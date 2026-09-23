@@ -168,13 +168,16 @@ async function setup() {
   addFile(path.join(".claude", "skills", "video-rules", "SKILL.md"));
   addFile(path.join(".claude", "skills", "motion-direction", "SKILL.md"));
   addFile(path.join(".claude", "skills", "sound-design", "SKILL.md"));
+  // Sound-effect library (CC0) + Remotion helpers (<Sfx>, <MusicBed>), used by the sound-design skill.
+  for (const f of fs.readdirSync(path.join(PKG, "sfx"))) addFile(path.join("sfx", f), path.join("public", "sfx", f));
+  if (fs.existsSync("src")) addFile(path.join("templates", "sound.tsx"), path.join("src", "coldframe-sound.tsx"));
 
   step(5, "Google Drive (optional)");
   if ((await ask("Also save every render to your Google Drive? [y/N]", "n")).startsWith("y")) await drive({ repo });
   else console.log("  Skipped. Run `coldframe drive` any time to add it.");
 
   step(6, "Push");
-  run("git", ["add", ".github", ".claude"]);
+  run("git", ["add", ".github", ".claude", path.join("public", "sfx"), ...(fs.existsSync(path.join("src", "coldframe-sound.tsx")) ? [path.join("src", "coldframe-sound.tsx")] : [])]);
   if (run("git", ["diff", "--cached", "--quiet"]).status !== 0) {
     run("git", ["commit", "-qm", "Add coldframe"]);
     const p = run("git", ["push"], { inherit: true });

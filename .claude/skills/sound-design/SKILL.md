@@ -20,7 +20,7 @@ Sound is half of what makes a film feel expensive. Every visible action gets a s
 
 | What | Where | Notes |
 |---|---|---|
-| UI + transition SFX | `public/sfx/` from the coldframe library (`library.json` lists each sound, what it's for, gain) | CC0 (Kenney, Remotion `@remotion/sfx`); safe to commit and redistribute |
+| UI + transition SFX | `public/sfx/`: the coldframe library (§5) | CC0 (Kenney, Remotion `@remotion/sfx`); safe to commit and redistribute |
 | More SFX | [Kenney audio packs](https://kenney.nl/assets?q=audio) (CC0), [`@remotion/sfx`](https://www.remotion.dev/docs/sfx) (per-sound license on its page), Freesound (filter CC0) | Record the source + license in `library.json` |
 | Music | The user picks: [Pixabay Music](https://pixabay.com/music/) (free, no attribution), [Chosic](https://www.chosic.com/free-music/all/) CC0 filter, YouTube Audio Library, or a track they own | Offer 2–3 options that fit the mood; don't commit Pixabay/YouTube tracks to a **public** repo (their licenses forbid redistributing the file itself); keep them in the project's `public/music/` of a private repo or add to `.gitignore` and upload for the render |
 | AI-generated SFX / music / voice | ElevenLabs (sound effects, music, TTS) or similar, only with the user's API key and OK | Listen and approve before use |
@@ -41,7 +41,7 @@ Pick by what the element *is*, how heavy it is, and what just happened. Never re
 | Success / verified / done | confirm chime (the one "reward" sound) | +6 dB |
 | Error / failure (only if shown) | low muted buzz, short | +4 dB |
 | Camera move, fly-in, whip pan | whoosh / swish whose peak lines up with the fastest frame | +4 dB |
-| Palette impact / big reveal | riser into a low hit (sub impact) | +8 dB, the loudest moment |
+| Palette impact / big reveal | `impact` (low hit), with a riser before it if one has been added to the library | +8 dB, the loudest moment |
 | Logo / end card | soft hit + the music's resolving phrase | +6 dB |
 
 Group sounds so the film has 3–4 recognisable families (clicks, whooshes, one reward chime, one impact), not 30 random ones.
@@ -55,35 +55,42 @@ Group sounds so the film has 3–4 recognisable families (clicks, whooshes, one 
 
 ## 5. Build it in Remotion
 
-Keep every cue in the same config object as the visuals (scene-relative frames), so sound and picture can't drift.
+`coldframe setup` installs the library in `public/sfx/` (37 CC0 sounds in 17 roles, trimmed so they start on the frame, loudness-matched; sources in `public/sfx/LICENSE.md`, details in `library.json`) and the helpers in `src/coldframe-sound.tsx`.
+
+| Role | Use |
+|---|---|
+| `click-soft` | click on a small control (tab, link, icon) |
+| `click-firm` | press on a primary button (Run, Render, CTA) |
+| `tick` | hover / focus / selection moving |
+| `key`, `key-enter` | typing; Enter at the end of a command |
+| `toggle-on`, `toggle-off` | switches, checkboxes |
+| `select` | option picked in a list |
+| `drop` | card/panel lands and snaps into place |
+| `pop` | notification, badge, small item appears |
+| `confirm` | success / verified / done (the one reward sound) |
+| `error` | a failure shown on screen |
+| `open`, `close` | panel/window expands or collapses (peak-aligned) |
+| `whoosh` | camera move, fly-in, whip pan (peak-aligned) |
+| `impact-soft` | element lands with weight, beat accent |
+| `impact` | the one big moment: palette impact, reveal, logo |
 
 ```tsx
-import { Audio } from "@remotion/media";
-import { interpolate, Sequence, staticFile, useVideoConfig } from "remotion";
+import { MusicBed, Sfx, typingCues } from "./coldframe-sound";
 
-// Music bed: fade in, dip under the big reveal, fade out on the end card.
-export const MusicBed: React.FC<{ src: string; duckAt?: number[]; base?: number }> = ({ src, duckAt = [], base = 0.35 }) => {
-  const { durationInFrames, fps } = useVideoConfig();
-  return (
-    <Audio
-      src={staticFile(src)}
-      volume={(f) => {
-        const fade = Math.min(interpolate(f, [0, fps], [0, 1], { extrapolateRight: "clamp" }),
-                              interpolate(f, [durationInFrames - 2 * fps, durationInFrames], [1, 0], { extrapolateLeft: "clamp" }));
-        const duck = duckAt.reduce((v, at) => v * interpolate(f, [at - 8, at - 2, at + 10, at + 30], [1, 0.35, 0.35, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), 1);
-        return base * fade * duck;
-      }}
-    />
-  );
-};
-
-// One sound effect at a frame. `name` is a key in public/sfx/library.json.
-export const Sfx: React.FC<{ at: number; file: string; volume?: number; rate?: number }> = ({ at, file, volume = 1, rate = 1 }) => (
-  <Sequence from={at} layout="none">
-    <Audio src={staticFile(`sfx/${file}`)} volume={volume} playbackRate={rate} />
-  </Sequence>
-);
+<MusicBed src="music/bed.mp3" volume={0.35} duckAt={[REVEAL]} />
+<Sfx role="click-firm" at={PRESS} />                 // the frame the button visibly depresses
+<Sfx role="whoosh" at={FASTEST_FRAME} />             // peak lands on `at` automatically
+{typingCues(TYPE_START, TYPE_END, cmd.length).map((f) => <Sfx key={f} role="key" at={f} />)}
+<Sfx role="key-enter" at={ENTER} />
+<Sfx role="confirm" at={RESULT} />
+<Sfx role="impact" at={REVEAL} />
 ```
+
+- Variants rotate and `playbackRate` varies ±3% automatically, so repeated clicks never sound identical.
+- Keep every cue frame in the same config object as the visuals (scene-relative frames), so sound and picture can't drift.
+- Start with `volume` 1 for effects and 0.3–0.4 for the music bed, then adjust by measuring (§6).
+- Audition the whole library: the example project's `SfxAudition` composition (`npx remotion render SfxAudition out/sfx-audition.wav --codec=wav`).
+- Need a sound the library doesn't have (riser, deep sub hit, ambience)? Add a CC0 file to `public/sfx/`, note its source in `LICENSE.md`, and ask the user to approve it.
 
 coldframe's chunks carry their audio slice as lossless PCM, so many overlapping `<Audio>` tags render and join sample-exactly in the cloud.
 
