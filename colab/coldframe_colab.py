@@ -44,6 +44,16 @@ apt-get install -y -qq --no-install-recommends libnss3 libdbus-1-3 libatk1.0-0 l
 apt-get install -y -qq libasound2 >/dev/null 2>&1 || apt-get install -y -qq libasound2t64 >/dev/null 2>&1 || true
 apt-get install -y -qq libcups2 >/dev/null 2>&1 || apt-get install -y -qq libcups2t64 >/dev/null 2>&1 || true
 apt-get install -y -qq libvulkan1 >/dev/null 2>&1 || true  # for GPU rendering on T4 runtimes
+# Colab ships the NVIDIA driver in /usr/lib64-nvidia but doesn't register it for EGL or Vulkan,
+# so Chrome falls back to CPU (Mesa llvmpipe / SwiftShader). Register both.
+if [ -e /usr/lib64-nvidia/libEGL_nvidia.so.0 ]; then
+  echo "[setup] register NVIDIA EGL + Vulkan"
+  mkdir -p /usr/share/glvnd/egl_vendor.d /etc/vulkan/icd.d
+  echo '{{"file_format_version":"1.0.0","ICD":{{"library_path":"/usr/lib64-nvidia/libEGL_nvidia.so.0"}}}}' > /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+  echo '{{"file_format_version":"1.0.0","ICD":{{"library_path":"/usr/lib64-nvidia/libEGL_nvidia.so.0","api_version":"1.3.0"}}}}' > /etc/vulkan/icd.d/nvidia_icd.json
+  echo /usr/lib64-nvidia > /etc/ld.so.conf.d/zz-nvidia.conf
+  ldconfig 2>/dev/null || true
+fi
 echo "[setup] clone {repo}@{ref}"
 rm -rf {dest}
 git clone -q --depth 1 --branch {ref} {url} {dest}
@@ -148,7 +158,7 @@ def status(tail: int = 12) -> str:
         word = ("ready" if phase == "setup" else "done") if code == "0" else f"failed (exit {code})"
     else:
         word = "running"
-    lines = LOG.read_text(errors="replace").splitlines()[-tail:] if LOG.exists() else []
+    lines = LOG.read_text(errors="replace").splitlines()[-tail:] if LOG.exists() and tail > 0 else []
     # Remotion rewrites its progress line with \r; keep only the latest state of each line.
     lines = [l.split("\r")[-1] for l in lines]
     print(f"{phase}: {word} ({elapsed // 60}m {elapsed % 60}s)")
@@ -159,12 +169,38 @@ def status(tail: int = 12) -> str:
     return word
 
 
+_GPU_CHECK = r"""
+cd {project}
+npx remotion browser ensure --chrome-mode=chrome-for-testing >/dev/null 2>&1 || true
+C=$(find node_modules/.remotion -path "*chrome-for-testing*" -name chrome -type f | head -1)
+cat > /tmp/cf-gl.html <<'EOF'
+<body><script>
+const g = document.createElement('canvas').getContext('webgl'); let r = 'none';
+if (g) {{ const e = g.getExtension('WEBGL_debug_renderer_info'); r = e ? g.getParameter(e.UNMASKED_RENDERER_WEBGL) : g.getParameter(g.RENDERER); }}
+document.body.innerText = 'WebGL renderer: ' + r;
+</script></body>
+EOF
+for gl in vulkan egl; do
+  flags="--use-angle=vulkan --use-vulkan --enable-features=Vulkan"
+  [ "$gl" = egl ] && flags="--use-angle=gl-egl --use-gl=angle"
+  r=$(timeout 30 "$C" --headless=new --no-sandbox --ignore-gpu-blocklist --enable-gpu $flags \
+      --virtual-time-budget=3000 --dump-dom file:///tmp/cf-gl.html 2>/dev/null | grep -o 'WebGL renderer: [^<]*')
+  echo "$gl: ${{r:-WebGL renderer: none}}"
+done
+echo "(NVIDIA / Tesla in the name = GPU. SwiftShader or llvmpipe = CPU fallback.)"
+"""
+
+
 def gpu_check() -> None:
-    """Ask Remotion whether Chrome can use the GPU (background; read the result with status())."""
+    """Check which device Chrome draws WebGL with (background; read the result with status()).
+
+    `npx remotion gpu` reports chrome://gpu, which says "Disabled" in headless mode on
+    Colab even when WebGL runs on the T4, so this asks WebGL itself.
+    """
     st = _state()
     if not st.get("project"):
         raise RuntimeError("Run setup() first.")
-    _background(f"cd {shlex.quote(st['project'])}\nnpx remotion gpu --chrome-mode=chrome-for-testing --gl=vulkan", "gpucheck")
+    _background(_GPU_CHECK.format(project=shlex.quote(st["project"])), "gpucheck")
     print("Checking GPU access in the background. Call status() in ~30 s.")
 
 

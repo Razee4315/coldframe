@@ -44,7 +44,7 @@ cf.gpu()                                        # what machine did we get
 cf.setup("<owner>/<repo>", project_dir=".")     # background install, ~2-4 min
 cf.status()                                     # poll until "ready"
 cf.render("<CompositionId>")                    # background render (CPU)
-cf.gpu_check(); cf.status()                     # on a T4 runtime: can Chrome use the GPU?
+cf.gpu_check(); cf.status()                     # on a T4 runtime: does WebGL run on the GPU?
 cf.render("<CompositionId>", gpu=True)          # GPU render, mainly helps WebGL/three.js
 cf.status()                                     # poll until "done"
 cf.to_drive("coldframe")                        # user clicks "Allow" for Drive the first time
