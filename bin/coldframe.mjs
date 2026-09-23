@@ -27,12 +27,38 @@ const WORKFLOW = "coldframe.yml";
 const PKG = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const isWin = process.platform === "win32";
 
+/**
+ * Find a tool even when this terminal's PATH is stale (a terminal opened before
+ * `winget install` doesn't see the new PATH). Falls back to the usual install folders.
+ */
+function locate(name) {
+  if (!spawnSync(name, ["--version"], { stdio: "ignore" }).error) return name;
+  if (!isWin) return null;
+  const local = process.env.LOCALAPPDATA || "";
+  const candidates = {
+    gh: [path.join(process.env.ProgramFiles || "C:\\Program Files", "GitHub CLI", "gh.exe"), path.join(local, "Programs", "GitHub CLI", "gh.exe")],
+    rclone: [path.join(local, "Microsoft", "WinGet", "Links", "rclone.exe")],
+  }[name] || [];
+  // winget unpacks rclone to Packages\Rclone.Rclone_*\rclone-vX-windows-amd64\rclone.exe
+  const pkgs = path.join(local, "Microsoft", "WinGet", "Packages");
+  if (name === "rclone" && fs.existsSync(pkgs)) {
+    for (const d of fs.readdirSync(pkgs).filter((d) => d.startsWith("Rclone.Rclone"))) {
+      for (const sub of fs.readdirSync(path.join(pkgs, d))) candidates.push(path.join(pkgs, d, sub, "rclone.exe"));
+    }
+  }
+  return candidates.find((c) => fs.existsSync(c)) || null;
+}
+const tools = {};
+const tool = (name) => (name in tools ? tools[name] : (tools[name] = locate(name)));
+
 const run = (cmd, args, opts = {}) =>
-  spawnSync(cmd, args, { encoding: "utf8", stdio: opts.inherit ? "inherit" : "pipe", input: opts.input, shell: false });
-const has = (cmd) => !run(cmd, ["--version"]).error;
+  spawnSync(tool(cmd) || cmd, args, { encoding: "utf8", stdio: opts.inherit ? "inherit" : "pipe", input: opts.input, shell: false });
+const has = (cmd) => Boolean(tool(cmd));
 const gh = (args, opts = {}) => {
   const r = run("gh", args, opts);
-  if (r.error) die("the GitHub CLI (gh) is not installed. Run `coldframe setup` for instructions.");
+  if (r.error) die(`the GitHub CLI (gh) isn't installed. Install it with:
+    ${isWin ? "winget install GitHub.cli" : process.platform === "darwin" ? "brew install gh" : "see https://cli.github.com"}
+  then open a NEW terminal and run this again.`);
   if (r.status !== 0 && !opts.allowFail) die((r.stderr || r.stdout || "").trim() || `gh ${args.join(" ")} failed`);
   return (r.stdout || "").trim();
 };
@@ -66,17 +92,27 @@ function parse(argv) {
 
 const currentRepo = () => gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"], { allowFail: true });
 
+/** Stop early, with a clear hint, when run outside a project (e.g. in C:\Windows\System32). */
+function requireProject() {
+  if (fs.existsSync("package.json") || git(["rev-parse", "--show-toplevel"])) return;
+  const example = isWin ? 'cd "$HOME\\Desktop\\my-video"' : "cd ~/my-video";
+  die(`run this inside your video project folder (the one with package.json).
+  This terminal is in: ${process.cwd()}
+  Go to your project first, for example:
+    ${example}
+  then run the command again.`);
+}
+const repoOrDie = () =>
+  currentRepo() || die("this folder isn't on GitHub yet. Run `npx github:Razee4315/coldframe setup` first.");
+
 /* ---------------- setup ---------------- */
 
 async function setup() {
+  requireProject();
   console.log("coldframe setup: a few checks, then you're ready to render in the cloud.");
 
   step(1, "GitHub CLI");
-  if (!has("gh")) {
-    console.log(`  The GitHub CLI isn't installed. Install it, open a new terminal, and run this again:
-    ${isWin ? "winget install GitHub.cli" : process.platform === "darwin" ? "brew install gh" : "see https://cli.github.com"}`);
-    process.exit(1);
-  }
+  gh(["--version"]); // explains how to install it if it's missing
   if (run("gh", ["auth", "status"]).status !== 0) {
     console.log("  Sign in to GitHub. A code appears here; paste it in the browser page that opens.");
     run("gh", ["auth", "login", "--web", "--git-protocol", "https", "--scopes", "workflow"], { inherit: true });
@@ -145,7 +181,8 @@ function addFile(from, to = from) {
 /* ---------------- drive ---------------- */
 
 async function drive(opts = {}) {
-  const repo = opts.repo || currentRepo() || die("run this inside a project that is on GitHub.");
+  if (!opts.repo) requireProject();
+  const repo = opts.repo || repoOrDie();
   if (!has("rclone")) {
     console.log(`  Google Drive uploads use rclone. Install it, open a new terminal, and run \`coldframe drive\`:
     ${isWin ? "winget install Rclone.Rclone" : process.platform === "darwin" ? "brew install rclone" : "see https://rclone.org/install/"}`);
@@ -173,7 +210,8 @@ async function drive(opts = {}) {
 async function render(opts) {
   const comp = opts._[1];
   if (!comp) die("usage: coldframe render <CompositionId> [--chunks 8]");
-  const repo = opts.repo || currentRepo() || die("this folder isn't on GitHub. Run `coldframe setup` first.");
+  if (!opts.repo) requireProject();
+  const repo = opts.repo || repoOrDie();
   const ref = opts.ref || git(["rev-parse", "--abbrev-ref", "HEAD"]) || "main";
 
   const unpushed = git(["log", "--oneline", `origin/${ref}..HEAD`]);
@@ -233,7 +271,8 @@ function init() {
 }
 
 function runs(opts) {
-  const repo = opts.repo || currentRepo() || die("this folder isn't on GitHub.");
+  if (!opts.repo) requireProject();
+  const repo = opts.repo || repoOrDie();
   gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--limit", "10"], { inherit: true });
 }
 
