@@ -90,7 +90,25 @@ function parse(argv) {
   return out;
 }
 
-const currentRepo = () => gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"], { allowFail: true });
+/** owner/name of this folder's GitHub repo, read from git (no GitHub sign-in needed). */
+function currentRepo() {
+  const url = git(["remote", "get-url", "origin"]);
+  const m = url.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/i);
+  return m ? `${m[1]}/${m[2]}` : "";
+}
+
+/** Make sure gh is installed and signed in; if not, walk the user through signing in. */
+function ensureGitHub() {
+  gh(["--version"]); // explains how to install it if it's missing
+  if (run("gh", ["auth", "status"]).status === 0) return;
+  console.log(`
+  First, sign in to GitHub (one time on this computer):
+  a code appears below; press Enter, then paste the code in the browser page that opens.
+`);
+  run("gh", ["auth", "login", "--web", "--git-protocol", "https", "--scopes", "workflow"], { inherit: true });
+  if (run("gh", ["auth", "status"]).status !== 0) die("GitHub sign-in didn't finish. Run the command again.");
+  console.log("");
+}
 
 /** Stop early, with a clear hint, when run outside a project (e.g. in C:\Windows\System32). */
 function requireProject() {
@@ -103,7 +121,9 @@ function requireProject() {
   then run the command again.`);
 }
 const repoOrDie = () =>
-  currentRepo() || die("this folder isn't on GitHub yet. Run `npx github:Razee4315/coldframe setup` first.");
+  currentRepo() ||
+  die(`this folder isn't connected to a GitHub repo (git has no "origin" pointing at github.com).
+  Run \`npx github:Razee4315/coldframe setup\` first.`);
 
 /* ---------------- setup ---------------- */
 
@@ -112,12 +132,7 @@ async function setup() {
   console.log("coldframe setup: a few checks, then you're ready to render in the cloud.");
 
   step(1, "GitHub CLI");
-  gh(["--version"]); // explains how to install it if it's missing
-  if (run("gh", ["auth", "status"]).status !== 0) {
-    console.log("  Sign in to GitHub. A code appears here; paste it in the browser page that opens.");
-    run("gh", ["auth", "login", "--web", "--git-protocol", "https", "--scopes", "workflow"], { inherit: true });
-    if (run("gh", ["auth", "status"]).status !== 0) die("GitHub sign-in didn't finish. Run `coldframe setup` again.");
-  }
+  ensureGitHub();
   ok(`signed in as ${gh(["api", "user", "--jq", ".login"])}`);
 
   step(2, "Remotion project");
@@ -183,6 +198,7 @@ function addFile(from, to = from) {
 async function drive(opts = {}) {
   if (!opts.repo) requireProject();
   const repo = opts.repo || repoOrDie();
+  ensureGitHub();
   if (!has("rclone")) {
     console.log(`  Google Drive uploads use rclone. Install it, open a new terminal, and run \`coldframe drive\`:
     ${isWin ? "winget install Rclone.Rclone" : process.platform === "darwin" ? "brew install rclone" : "see https://rclone.org/install/"}`);
@@ -212,6 +228,7 @@ async function render(opts) {
   if (!comp) die("usage: coldframe render <CompositionId> [--chunks 8]");
   if (!opts.repo) requireProject();
   const repo = opts.repo || repoOrDie();
+  ensureGitHub();
   const ref = opts.ref || git(["rev-parse", "--abbrev-ref", "HEAD"]) || "main";
 
   const unpushed = git(["log", "--oneline", `origin/${ref}..HEAD`]);
@@ -273,6 +290,7 @@ function init() {
 function runs(opts) {
   if (!opts.repo) requireProject();
   const repo = opts.repo || repoOrDie();
+  ensureGitHub();
   gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--limit", "10"], { inherit: true });
 }
 
