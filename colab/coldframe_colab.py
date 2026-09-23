@@ -77,8 +77,9 @@ def _background(script: str, phase: str) -> None:
     runner = ROOT / f"{phase}.sh"
     runner.write_text(script + "\n")
     (ROOT / f"{phase}.code").unlink(missing_ok=True)
+    q = lambda p: shlex.quote(Path(p).as_posix())
     proc = subprocess.Popen(
-        ["bash", "-c", f"bash {runner} >> {LOG} 2>&1; echo $? > {ROOT}/{phase}.code"],
+        ["bash", "-c", f"bash {q(runner)} >> {q(LOG)} 2>&1; echo $? > {q(ROOT / (phase + '.code'))}"],
         start_new_session=True,
     )
     _save(phase=phase, pid=proc.pid, started=time.time())

@@ -1,10 +1,11 @@
 # coldframe: distributed Remotion render on GitHub Actions.
 #
 # plan    bundles the project once and splits the frames into N ranges
-# chunk   renders one frame range per runner, all in parallel (video only)
-# audio   renders the full soundtrack once, so chunk seams never click
-# stitch  joins the chunks losslessly, muxes the audio, verifies the frame
-#         count, uploads the MP4 as an artifact and (optionally) to Google Drive
+# chunk   renders one frame range per runner, all in parallel: video plus a
+#         lossless PCM slice of the audio, so the joins are sample-exact
+# stitch  joins the chunks without re-encoding the video, encodes the audio
+#         once, verifies the frame count, uploads the MP4 as an artifact and
+#         (optionally) to Google Drive
 #
 # Call it from any Remotion repo:
 #   jobs:
@@ -42,6 +43,10 @@ on:
         description: File name of the final MP4 (blank = <composition>-<run>.mp4)
         type: string
         default: ""
+      frame-timeout:
+        description: Milliseconds one frame may take before Remotion gives up (heavy WebGL on CPU needs more)
+        type: number
+        default: 120000
       gl:
         description: OpenGL backend for Chrome (swangle works on CPU-only runners; needed for three.js/WebGL)
         type: string
@@ -179,7 +184,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
-    steps: &renderSteps
+    steps:
       - uses: actions/checkout@v7
         with: { lfs: true }
       - uses: actions/setup-node@v7
@@ -205,14 +210,12 @@ jobs:
           INDEX: ${{ matrix.index }}
         run: |
           mkdir -p coldframe-out
-          if [ "$INDEX" = "audio" ]; then
-            npx remotion render coldframe-bundle "$COMPOSITION" coldframe-out/audio.wav \
-              --codec=wav --props="$PROPS" --gl=${{ inputs.gl }} ${{ inputs.extra-args }}
-          else
-            npx remotion render coldframe-bundle "$COMPOSITION" "coldframe-out/chunk-$INDEX.mp4" \
-              --codec=h264 --muted --frames="$RANGE" --props="$PROPS" \
-              --gl=${{ inputs.gl }} --concurrency=${{ inputs.concurrency }} ${{ inputs.extra-args }}
-          fi
+          # Matroska + 16-bit PCM: each chunk carries its exact slice of the
+          # soundtrack, and PCM slices join sample-exactly (no clicks, no gaps).
+          npx remotion render coldframe-bundle "$COMPOSITION" "coldframe-out/chunk-$INDEX.mkv" \
+            --codec=h264-mkv --audio-codec=pcm-16 --frames="$RANGE" --props="$PROPS" \
+            --gl=${{ inputs.gl }} --concurrency=${{ inputs.concurrency }} \
+            --timeout=${{ inputs.frame-timeout }} ${{ inputs.extra-args }}
       - uses: actions/upload-artifact@v7
         with:
           name: coldframe-part-${{ matrix.index }}
@@ -220,18 +223,9 @@ jobs:
           retention-days: 1
           compression-level: 0
 
-  audio:
-    name: Audio
-    needs: plan
-    runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        include: [{ index: audio, start: 0, end: 0 }]
-    steps: *renderSteps
-
   stitch:
     name: Stitch + deliver
-    needs: [plan, chunk, audio]
+    needs: [plan, chunk]
     runs-on: ubuntu-24.04
     outputs:
       artifact: ${{ steps.name.outputs.artifact }}
@@ -272,16 +266,13 @@ jobs:
           ffprobe() { npx remotion ffprobe "$@"; }
           P="$GITHUB_WORKSPACE/parts"; F="$GITHUB_WORKSPACE/final"
           ls -la "$P"
-          for f in "$P"/chunk-*.mp4; do echo "file '$f'"; done | sort > list.txt
-          ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i list.txt -c copy video.mp4
+          for f in "$P"/chunk-*.mkv; do echo "file '$f'"; done | sort > list.txt
+          ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i list.txt -c copy joined.mkv
           mkdir -p "$F"
-          if [ -s "$P/audio.wav" ]; then
-            ffmpeg -hide_banner -loglevel error -y -i video.mp4 -i "$P/audio.wav" \
-              -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest -movflags +faststart "$F/$FILE"
-          else
-            ffmpeg -hide_banner -loglevel error -y -i video.mp4 -c copy -movflags +faststart "$F/$FILE"
-          fi
-          rm -f video.mp4 list.txt
+          # Video is copied untouched; the joined PCM track is encoded to AAC once.
+          ffmpeg -hide_banner -loglevel error -y -i joined.mkv -map 0:v:0 -map "0:a:0?" \
+            -c:v copy -c:a aac -b:a 320k -movflags +faststart "$F/$FILE"
+          rm -f joined.mkv list.txt
           frames=$(ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of default=nw=1:nk=1 "$F/$FILE" | tr -dc 0-9)
           echo "Frames in output: $frames (expected $TOTAL)"
           if [ "$frames" != "$TOTAL" ]; then echo "::error::Frame count mismatch: $frames != $TOTAL"; exit 1; fi
@@ -322,7 +313,7 @@ jobs:
             echo "|---|---|"
             echo "| Composition | \`${{ inputs.composition }}\` ($SIZE, $FPS fps) |"
             echo "| Frames | $TOTAL ($(awk "BEGIN{printf \"%.1f\", $TOTAL/$FPS}") s of video) |"
-            echo "| Machines | $chunks in parallel + 1 audio |"
+            echo "| Machines | $chunks in parallel |"
             echo "| Wall time | $((secs/60)) min $((secs%60)) s |"
             echo "| Output | \`$FILE\` ($mb MB), artifact \`${FILE%.mp4}\` |"
             [ -n "$DRIVE" ] && echo "| Google Drive | \`$DRIVE\` |"
