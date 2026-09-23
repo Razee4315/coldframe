@@ -25,7 +25,7 @@
 Rendering a long [Remotion](https://www.remotion.dev) video ties up your computer for minutes: fans at full speed, everything else slow. coldframe moves that work to free cloud machines:
 
 - **Split:** the timeline is cut into frame ranges and rendered on up to **20 GitHub Actions runners at the same time**.
-- **Stitch:** the pieces are joined without re-encoding, the soundtrack is rendered once in one piece, and **every frame is counted** before the run passes.
+- **Stitch:** the video pieces are joined without re-encoding, each carries its slice of the audio as lossless PCM so the soundtrack joins **sample-exactly**, and **every frame is counted** before the run passes.
 - **Deliver:** the MP4 is attached to the run, copied to **Google Drive** (optional), and downloaded to your PC by the CLI.
 - **Colab:** a notebook and helper for Google Colab that **Claude Code can drive** through Google's [Colab MCP server](https://github.com/googlecolab/colab-mcp).
 
@@ -39,14 +39,13 @@ flowchart LR
   A --> B2[Chunk 01]
   A --> B3[...]
   A --> B8[Chunk 07]
-  A --> C[Audio<br/>whole soundtrack]
-  B1 & B2 & B3 & B8 & C --> D[Stitch<br/>join, mux, count frames]
+  B1 & B2 & B3 & B8 --> D[Stitch<br/>join, encode audio, count frames]
   D --> E[Artifact]
   D --> F[Google Drive]
 ```
 
 <p align="center">
-  <img src="docs/media/actions-run.png" alt="A real coldframe run on GitHub Actions: Plan, 8 chunks and the audio job in parallel, then Stitch + deliver" width="560">
+  <img src="docs/media/actions-run.png" alt="A real coldframe run on GitHub Actions: Plan, 8 chunks in parallel, then Stitch + deliver" width="560">
   <img src="docs/media/cli.png" alt="Terminal output of coldframe render: start, wait for all jobs, save the MP4" width="560">
 </p>
 <p align="center"><sub>A real run of the demo: every chunk renders on its own machine at the same time, and one command starts it, waits and downloads the result.</sub></p>
@@ -126,6 +125,7 @@ jobs:
 | `extra-args` | | Extra flags for every `remotion render`, e.g. `--crf=16` |
 | `min-frames-per-chunk` | `60` | Never split finer than this |
 | `drive-folder` | `gdrive:coldframe` | rclone destination, used when `RCLONE_CONF` is set |
+| `frame-timeout` | `120000` | Milliseconds a single frame may take; heavy WebGL on CPU needs more than Remotion's default |
 | `node-version` | `22` | Node.js version |
 
 Your project needs a committed `package-lock.json`. coldframe also adds Linux binaries that npm often leaves out of lockfiles made on Windows or macOS ([npm/cli#4828](https://github.com/npm/cli/issues/4828)).
@@ -165,7 +165,7 @@ Measured, not estimated. Laptop: Intel i7-7820HQ, 4 cores / 8 threads.
 
 | Video | Laptop | coldframe |
 |---|---|---|
-| 16 s demo, 480 frames, 1080p30 | **57 s** | about 2.5 min on 8 machines ([run](https://github.com/Razee4315/coldframe/actions/runs/35850865828)) |
+| 16 s demo, 480 frames, 1080p30 | **57 s** | 1 min 42 s on 8 machines ([run](https://github.com/Razee4315/coldframe/actions/runs/35857774301)) |
 | 88 s launch film, 5,280 frames, 1080p60, three.js 360° scenes | 12–20 min | {{BIG}} |
 
 Each machine spends about 40 s getting ready (checkout, cached `npm ci`, downloading the bundle), so **short clips are still faster at home**. The longer and heavier the video, the more the split pays off. And either way, your computer is free while it renders.
@@ -174,7 +174,7 @@ Each machine spends about 40 s getting ready (checkout, cached `npm ci`, downloa
 
 **Is it free?** On public repos, GitHub Actions minutes on standard runners are free. Private repos get 2,000 free minutes a month, and every machine counts: 8 chunks × 3 min = 24 min.
 
-**Will the joins show?** No. Remotion renders each frame on its own, chunks are joined without re-encoding, and the audio is rendered once for the whole video. In the demo, the change between frames across a join is the same size as ordinary frame-to-frame motion, and a wrong frame count fails the run.
+**Will the joins show?** No. Remotion renders each frame on its own, video chunks are joined without re-encoding, and each chunk carries its audio slice as 16-bit PCM. Joined, those slices are bit-identical to a single-pass audio render (tested: 768,000 of 768,000 samples match). A wrong frame count fails the run.
 
 **Does WebGL / three.js work?** Yes, through SwiftShader (`--gl=swangle`). It's slower than a GPU, which is exactly why splitting the work helps.
 

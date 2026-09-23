@@ -226,7 +226,7 @@ const Stitch: React.FC = () => {
 
       <div style={{ position: "absolute", left: BAR.left, top: BAR.top + 80, display: "flex", gap: 48, opacity: verified }}>
         <Label style={{ color: C.ok }}>✓ {TOTAL_FRAMES} / {TOTAL_FRAMES} frames</Label>
-        <Label>lossless join · single audio pass · h.264</Label>
+        <Label>lossless join · sample-exact audio · h.264</Label>
       </div>
 
       <Interactive.Div

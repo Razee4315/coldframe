@@ -327,7 +327,7 @@
           </div>
           <video id="demo" src="media/demo.mp4" poster="media/poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="coldframe demo video"></video>
         </div>
-        <p class="caption">This video was rendered by coldframe: <b>480 frames on 8 GitHub runners</b>, joined, verified and downloaded with one command. <a href="https://github.com/Razee4315/coldframe/actions/runs/35850865828">See the run</a></p>
+        <p class="caption">This video was rendered by coldframe: <b>480 frames on 8 GitHub runners</b>, joined, verified and downloaded with one command. <a href="https://github.com/Razee4315/coldframe/actions/runs/35857774301">See the run</a></p>
       </div>
     </div>
   </div>
@@ -355,7 +355,7 @@
         <div class="stage">
           <div class="n">02 · render</div>
           <h3>Render in parallel</h3>
-          <p>Each runner renders its own range. The soundtrack renders once, in one piece, so no clicks at the seams.</p>
+          <p>Each runner renders its own range, with its exact slice of the soundtrack in lossless PCM.</p>
           <div class="lanes" aria-hidden="true">
             <div class="lane"><span>chunk 00</span><div class="bar"><span></span></div></div>
             <div class="lane"><span>chunk 01</span><div class="bar"><span></span></div></div>
@@ -365,13 +365,12 @@
             <div class="lane"><span>chunk 05</span><div class="bar"><span></span></div></div>
             <div class="lane"><span>chunk 06</span><div class="bar"><span></span></div></div>
             <div class="lane"><span>chunk 07</span><div class="bar"><span></span></div></div>
-            <div class="lane audio"><span>audio</span><div class="bar"><span></span></div></div>
           </div>
         </div>
         <div class="stage">
           <div class="n">03 · stitch</div>
           <h3>Join and verify</h3>
-          <p>Joins the chunks without re-encoding, adds the audio, then counts every frame. A wrong count fails the run.</p>
+          <p>Joins the chunks without re-encoding the video, encodes the audio once, then counts every frame. A wrong count fails the run.</p>
           <div class="joined" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         </div>
         <div class="stage">
@@ -388,10 +387,10 @@
       <div class="shots2">
         <figure class="shot" style="margin:0">
           <img src="media/actions-run.png" alt="GitHub Actions run graph: Plan, eight Chunk jobs and an Audio job in parallel, then Stitch + deliver" loading="lazy" width="1796" height="1452">
-          <figcaption>A real run of the demo above: plan, 8 chunks and the audio in parallel, then stitch.</figcaption>
+          <figcaption>A real run of the demo above: plan, 8 chunks in parallel, then stitch.</figcaption>
         </figure>
         <figure class="shot" style="margin:0">
-          <img src="media/cli.png" alt="Terminal: coldframe render starts the run, waits for eight chunks, the audio and the stitch, then saves the MP4" loading="lazy" width="2204" height="1220">
+          <img src="media/cli.png" alt="Terminal: coldframe render starts the run, waits for the eight chunks and the stitch, then saves the MP4" loading="lazy" width="2204" height="1220">
           <figcaption>One command from your terminal: start, wait, download.</figcaption>
         </figure>
       </div>
@@ -438,7 +437,7 @@ gh secret set RCLONE_CONF &lt; "$(rclone config file | tail -1)"</code></pre>
           <ul>
             <li>Free and unlimited on public repos, 2,000 min/month on private ones</li>
             <li>WebGL and three.js work on CPU runners (<code>--gl=swangle</code>)</li>
-            <li>Frame-count check on every run, audio rendered in one pass</li>
+            <li>Frame-count check on every run, sample-exact audio joins</li>
           </ul>
           <div class="foot"><a class="btn" href="https://github.com/Razee4315/coldframe/blob/main/.github/workflows/render.yml">Read the workflow</a></div>
         </div>
@@ -467,7 +466,7 @@ cf.to_drive(<span class="s">"coldframe"</span>)         <span class="c"># My Dri
         <table>
           <thead><tr><th>Measured</th><th>Laptop (i7, 4 cores / 8 threads)</th><th>coldframe on Actions</th></tr></thead>
           <tbody>
-            <tr><td>16 s demo above<br><span class="small">480 frames, 1080p, 30 fps</span></td><td class="num">57 s</td><td class="num">about 2.5 min <span class="small">(8 machines)</span></td></tr>
+            <tr><td>16 s demo above<br><span class="small">480 frames, 1080p, 30 fps</span></td><td class="num">57 s</td><td class="num">1 min 42 s <span class="small">(8 machines)</span></td></tr>
             <tr><td>88 s launch film<br><span class="small">5,280 frames, 1080p, 60 fps, three.js 360° scenes</span></td><td class="num">12–20 min, fans at full speed</td><td class="num"><span class="good">{{BIG}}</span></td></tr>
             <tr><td>Your computer while it renders</td><td>Busy and hot</td><td><span class="good">Free, can even be switched off</span></td></tr>
           </tbody>
@@ -493,7 +492,7 @@ claude mcp add colab-mcp -- uvx git+https://github.com/googlecolab/colab-mcp</co
       <h2>FAQ</h2>
       <div class="faq">
         <details><summary>Is it really free?</summary><p>On public repos, GitHub Actions minutes on standard runners are free. Private repos get 2,000 free minutes a month, and every chunk counts, so 8 chunks of 3 minutes use 24 minutes. Colab's free tier has no fixed price but limits usage and doesn't promise a GPU.</p></details>
-        <details><summary>Will the joins between chunks show?</summary><p>No. Remotion renders each frame on its own, so a frame looks the same whichever machine renders it. Chunks are joined without re-encoding, the soundtrack is rendered once for the whole video, and the run fails if the final frame count doesn't match.</p></details>
+        <details><summary>Will the joins between chunks show?</summary><p>No. Remotion renders each frame on its own, so a frame looks the same whichever machine renders it. The video chunks are joined without re-encoding. Each chunk carries its slice of the audio as lossless PCM, so the joined soundtrack is bit-identical to a single-pass render, and the run fails if the final frame count doesn't match.</p></details>
         <details><summary>Does three.js or WebGL work?</summary><p>Yes. Runners have no GPU, so Chrome uses SwiftShader through <code>--gl=swangle</code> (the default). It's slower than a GPU, which is exactly why splitting the work across machines helps.</p></details>
         <details><summary>Why not Remotion Lambda?</summary><p>Lambda is faster and made for production, but it needs an AWS account and costs money per render. coldframe is for people who want free cloud renders from a plain GitHub repo.</p></details>
         <details><summary>Where do my files go? Are they private?</summary><p>Your project stays in your own repo. Use a private repo if the footage is confidential. Rendered chunks are temporary artifacts deleted after a day, and the final MP4 stays on the run (90 days by default) and in your own Drive.</p></details>
@@ -550,7 +549,7 @@ claude mcp add colab-mcp -- uvx git+https://github.com/googlecolab/colab-mcp</co
   // animate the render lanes when the pipeline scrolls into view
   (() => {
     const bars = [...document.querySelectorAll(".lane .bar span")];
-    const ends = [0.92, 0.84, 1, 0.88, 0.97, 0.86, 0.93, 0.9, 0.8];
+    const ends = [0.92, 0.84, 1, 0.88, 0.97, 0.86, 0.93, 0.9];
     const run = () => bars.forEach((b, i) => {
       b.style.transition = "none"; b.style.width = "0";
       b.getBoundingClientRect();
