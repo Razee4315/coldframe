@@ -12,11 +12,13 @@ coldframe renders Remotion compositions on free cloud machines. Two backends:
 | **GitHub Actions** (default) | Final renders | Frames split across up to 20 machines in parallel |
 | **Google Colab** via the `colab-mcp` MCP server | Experiments, GPU tests, very long single jobs | One 2-vCPU machine (sometimes a T4 GPU) |
 
+Before designing or animating any video, follow the `video-rules` skill.
+
 Keep local work light: preview with `npx remotion still <Comp> --scale=0.25 --frame=N`, never full local renders unless asked.
 
 ## GitHub Actions (default)
 
-Requirements: `gh` signed in, the Remotion project pushed to GitHub, and `.github/workflows/coldframe.yml` in it (add it with `npx github:Razee4315/coldframe init`).
+Requirements: run `npx github:Razee4315/coldframe setup` once in the Remotion project. It checks the GitHub CLI and sign-in, puts the project on GitHub, adds `.github/workflows/coldframe.yml`, these skills and the Colab MCP config, and can connect Google Drive (`coldframe drive`).
 
 1. Commit and push the changes to render. The cloud renders what is on GitHub, not local edits.
 2. Run:
@@ -33,7 +35,7 @@ If the `RCLONE_CONF` repo secret is set, the MP4 is also copied to Google Drive 
 
 ## Google Colab (through colab-mcp)
 
-The user must have a Colab notebook open in their browser and connected to the MCP server. Every Colab tool call times out after 30 s, so never run long commands in the foreground. Use the helper, which runs work in the background:
+To connect, call the colab-mcp tool `open_colab_browser_connection`: it opens a Colab tab in the user's default browser (they must be signed in to Google there) and waits up to 60 s for it to connect. Then the notebook tools appear. For GPU work, ask the user to pick **Runtime → Change runtime type → T4 GPU** in that tab. Every Colab tool call times out after 30 s, so never run long commands in the foreground. Use the helper, which runs work in the background:
 
 ```python
 !curl -fsSL https://raw.githubusercontent.com/Razee4315/coldframe/main/colab/coldframe_colab.py -o coldframe_colab.py
@@ -41,7 +43,9 @@ import coldframe_colab as cf
 cf.gpu()                                        # what machine did we get
 cf.setup("<owner>/<repo>", project_dir=".")     # background install, ~2-4 min
 cf.status()                                     # poll until "ready"
-cf.render("<CompositionId>")                    # background render
+cf.render("<CompositionId>")                    # background render (CPU)
+cf.gpu_check(); cf.status()                     # on a T4 runtime: can Chrome use the GPU?
+cf.render("<CompositionId>", gpu=True)          # GPU render, mainly helps WebGL/three.js
 cf.status()                                     # poll until "done"
 cf.to_drive("coldframe")                        # user clicks "Allow" for Drive the first time
 ```

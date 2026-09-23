@@ -7,6 +7,7 @@ Colab MCP server (30 s tool timeout) can start a long render and poll it:
     cf.setup("Razee4315/coldframe", project_dir="example")   # ~2-4 min, runs in background
     cf.status()                                              # poll until "ready"
     cf.render("ColdframePromo")                              # background render
+    cf.render("ColdframePromo", gpu=True)                    # on a T4 runtime (experimental)
     cf.status()                                              # poll until "done"
     cf.to_drive()                                            # copy the MP4 to My Drive/coldframe
 
@@ -42,6 +43,7 @@ apt-get install -y -qq --no-install-recommends libnss3 libdbus-1-3 libatk1.0-0 l
   ffmpeg >/dev/null || true
 apt-get install -y -qq libasound2 >/dev/null 2>&1 || apt-get install -y -qq libasound2t64 >/dev/null 2>&1 || true
 apt-get install -y -qq libcups2 >/dev/null 2>&1 || apt-get install -y -qq libcups2t64 >/dev/null 2>&1 || true
+apt-get install -y -qq libvulkan1 >/dev/null 2>&1 || true  # for GPU rendering on T4 runtimes
 echo "[setup] clone {repo}@{ref}"
 rm -rf {dest}
 git clone -q --depth 1 --branch {ref} {url} {dest}
@@ -109,8 +111,14 @@ def render(
     concurrency: str = "100%",
     extra: str = "",
     frames: str | None = None,
+    gpu: bool = False,
 ) -> None:
-    """Start `remotion render` in the background. Poll with status()."""
+    """Start `remotion render` in the background. Poll with status().
+
+    gpu=True uses Remotion's cloud-GPU flags (chrome-for-testing + Vulkan). Pick a
+    T4 runtime first (Runtime > Change runtime type) and confirm with gpu_check().
+    It mostly speeds up WebGL / three.js scenes; plain HTML frames are CPU-bound.
+    """
     st = _state()
     if not st.get("project"):
         raise RuntimeError("Run setup() first.")
@@ -118,8 +126,8 @@ def render(
     out_path = ROOT / "out" / output
     args = [
         "npx", "remotion", "render", composition, str(out_path),
-        f"--props={props}", f"--gl={gl}", f"--concurrency={concurrency}",
-    ] + ([f"--frames={frames}"] if frames else []) + shlex.split(extra)
+        f"--props={props}", f"--concurrency={concurrency}",
+    ] + (["--chrome-mode=chrome-for-testing", "--gl=vulkan"] if gpu else [f"--gl={gl}"]) + ([f"--frames={frames}"] if frames else []) + shlex.split(extra)
     script = f"set -euo pipefail\ncd {shlex.quote(st['project'])}\nmkdir -p {ROOT / 'out'}\n" + shlex.join(args)
     _save(output=str(out_path))
     _background(script, "render")
@@ -149,6 +157,15 @@ def status(tail: int = 12) -> str:
         print(f"output: {st['output']} ({size:.1f} MB)")
     print("\n".join(lines))
     return word
+
+
+def gpu_check() -> None:
+    """Ask Remotion whether Chrome can use the GPU (background; read the result with status())."""
+    st = _state()
+    if not st.get("project"):
+        raise RuntimeError("Run setup() first.")
+    _background(f"cd {shlex.quote(st['project'])}\nnpx remotion gpu --chrome-mode=chrome-for-testing --gl=vulkan", "gpucheck")
+    print("Checking GPU access in the background. Call status() in ~30 s.")
 
 
 def gpu() -> None:
