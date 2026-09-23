@@ -1,0 +1,108 @@
+{
+  "_about": "Single config for the coldframe launch film: colours, text, facts and timings (frames at 30 fps). Read by src/launch/*.tsx and scripts/make_launch_soundtrack.py. Every number here comes from the real run below or the README.",
+  "fps": 30,
+  "colors": {
+    "frost": "#F3F6F7",
+    "panel": "#FFFFFF",
+    "line": "rgba(13,27,36,0.10)",
+    "ink": "#0D1B24",
+    "dim": "#5A6B77",
+    "cobalt": "#1D5FD0",
+    "cerulean": "#1FA0DC",
+    "ice": "#7FD6EE",
+    "ember": "#E4572E",
+    "ok": "#1E9D63"
+  },
+  "run": {
+    "_source": "https://github.com/Razee4315/coldframe/actions/runs/35863387579 (23 Sep 2026)",
+    "composition": "ColdframePromo",
+    "repo": "Razee4315/coldframe",
+    "frames": 600,
+    "planSeconds": 22,
+    "stitchSeconds": 22,
+    "total": "1m 53s",
+    "chunkSeconds": [30, 24, 39, 34, 27, 31, 24, 32],
+    "samples": "768,000 / 768,000"
+  },
+  "text": {
+    "hookLabel": "remotion render · this laptop",
+    "hook": ["Your laptop is ", "stuck."],
+    "edit": ["Every edit: render it ", "again."],
+    "blocked": ["Everything else ", "waits."],
+    "blockedApps": ["editor", "browser", "preview"],
+    "solution": ["Render on ", "free", " GitHub machines."],
+    "strip": "ColdframePromo · 600 frames",
+    "command": ["One ", "command."],
+    "cmd": "npx github:Razee4315/coldframe render ColdframePromo --chunks 8",
+    "cmdOut": "Started ColdframePromo on Razee4315/coldframe@main across 8 machines.",
+    "split": ["8 machines render ", "at once."],
+    "splitSource": "Real run · 23 Sep 2026 · 1m 53s total · sped up",
+    "stitch": ["Stitched. Every frame ", "counted."],
+    "stitchLabel": "frames in the final MP4",
+    "audio": ["Audio joins are ", "sample-exact."],
+    "audioSource": "768,000 / 768,000 samples identical to a single-pass render",
+    "deliver": ["Back on your laptop. ", "And Drive."],
+    "deliverTall": ["Saved to your ", "Drive."],
+    "file": "ColdframePromo.mp4",
+    "laptopPath": "out/cloud/",
+    "drivePath": "My Drive / coldframe /",
+    "proof": [
+      { "line": ["", "Free", " on public repos."], "source": "Private repos: 2,000 free minutes a month." },
+      { "line": ["Up to ", "20", " machines."], "source": "One piece of the video on each.", "grid": 20 },
+      { "line": ["Wrong frame count?\nThe run ", "fails."], "source": "Every render is counted before delivery." },
+      { "line": ["Your laptop rendered\n", "0", " frames."], "source": "It stayed free the whole time." }
+    ],
+    "ctaLine": ["Install in ", "one command."],
+    "ctaCmd": "npx github:Razee4315/coldframe setup",
+    "ctaCmdTall": ["npx github:Razee4315/", "coldframe setup"],
+    "url": "razee4315.github.io/coldframe",
+    "thumb": ["Your laptop", "stays ", "cold."]
+  },
+  "cuts": {
+    "LaunchFilm": {
+      "layout": "wide",
+      "audio": "launch-film.wav",
+      "scenes": [
+        { "type": "hook", "from": 0, "dur": 90, "textAt": 4, "p0": 0.35, "p1": 0.37 },
+        { "type": "edit", "from": 90, "dur": 105, "textAt": 44, "typeAt": 12, "resetAt": 36, "p0": 0.37, "p1": 0.02 },
+        { "type": "blocked", "from": 195, "dur": 105, "textAt": 10, "p0": 0.02, "p1": 0.05 },
+        { "type": "solution", "from": 300, "dur": 150, "markAt": 9, "textAt": 18, "stripAt": 64, "p0": 0.05 },
+        { "type": "command", "from": 450, "dur": 150, "textAt": 6, "typeAt": 20, "typeEnd": 62, "enterAt": 70, "collapseAt": 128 },
+        { "type": "split", "from": 600, "dur": 330, "textAt": 4, "splitAt": 8, "dropAt": 26, "planAt": 44, "fillAt": 58, "fillEnd": 270 },
+        { "type": "stitch", "from": 930, "dur": 105, "textAt": 24, "joinAt": 0, "checkAt": 48 },
+        { "type": "audio", "from": 1035, "dur": 90, "textAt": 16 },
+        { "type": "deliver", "from": 1125, "dur": 105, "textAt": 10, "dropA": 26, "dropB": 40 },
+        { "type": "proof", "from": 1230, "dur": 68, "index": 0 },
+        { "type": "proof", "from": 1298, "dur": 67, "index": 1 },
+        { "type": "proof", "from": 1365, "dur": 68, "index": 2 },
+        { "type": "proof", "from": 1433, "dur": 67, "index": 3 },
+        { "type": "cta", "from": 1500, "dur": 180, "wipe": true }
+      ]
+    },
+    "LaunchFilmVertical": {
+      "layout": "tall",
+      "audio": "launch-vertical.wav",
+      "scenes": [
+        { "type": "hook", "from": 0, "dur": 90, "textAt": 4, "p0": 0.35, "p1": 0.37 },
+        { "type": "edit", "from": 90, "dur": 105, "textAt": 44, "typeAt": 12, "resetAt": 36, "p0": 0.37, "p1": 0.03 },
+        { "type": "solution", "from": 195, "dur": 105, "markAt": 9, "textAt": 16, "stripAt": 50, "p0": 0.03 },
+        { "type": "command", "from": 300, "dur": 105, "textAt": 6, "typeAt": 14, "typeEnd": 44, "enterAt": 50, "collapseAt": 84 },
+        { "type": "split", "from": 405, "dur": 180, "textAt": 4, "splitAt": 8, "dropAt": 22, "planAt": 36, "fillAt": 46, "fillEnd": 132 },
+        { "type": "stitch", "from": 585, "dur": 90, "textAt": 18, "joinAt": 0, "checkAt": 40 },
+        { "type": "deliver", "from": 675, "dur": 75, "textAt": 6, "dropA": 20, "dropB": 30 },
+        { "type": "cta", "from": 750, "dur": 150, "wipe": true }
+      ]
+    },
+    "LaunchFilm15": {
+      "layout": "tall",
+      "audio": "launch-15.wav",
+      "scenes": [
+        { "type": "hook", "from": 0, "dur": 63, "textAt": 3, "p0": 0.35, "p1": 0.37 },
+        { "type": "solution", "from": 63, "dur": 72, "markAt": 6, "textAt": 12, "stripAt": 40, "p0": 0.37 },
+        { "type": "command", "from": 135, "dur": 78, "textAt": 4, "typeAt": 10, "typeEnd": 34, "enterAt": 38, "collapseAt": 60 },
+        { "type": "split", "from": 213, "dur": 114, "textAt": 4, "splitAt": 6, "dropAt": 16, "planAt": 28, "fillAt": 34, "fillEnd": 68, "counter": true },
+        { "type": "cta", "from": 327, "dur": 123, "wipe": true }
+      ]
+    }
+  }
+}
