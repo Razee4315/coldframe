@@ -18,7 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://razee4315.github.io/coldframe/"><img src="docs/media/site.png" alt="The coldframe website" width="900"></a>
+  <a href="docs/media/launch-film.mp4"><img src="docs/media/launch-poster.jpg" alt="coldframe launch film: Your laptop stays cold" width="900"></a><br>
+  <a href="docs/media/launch-film.mp4"><b>▶ Watch the launch film</b></a> (56 s), rendered by coldframe on 12 GitHub machines
 </p>
 
 ---
@@ -31,7 +32,7 @@ Rendering a [Remotion](https://www.remotion.dev) video ties up your computer: fa
 2. **Render:** up to 20 GitHub machines each render one piece, all at the same time.
 3. **Stitch:** the pieces are joined without re-encoding, every frame is counted, and the MP4 comes back to your computer (and to Google Drive, if you want).
 
-The [demo on the website](https://razee4315.github.io/coldframe/) ([MP4](docs/media/demo.mp4)) is a Remotion project in [`example/`](example), rendered by coldframe on 8 machines.
+The [launch film](docs/media/launch-film.mp4) above and the [demo on the website](https://razee4315.github.io/coldframe/) ([MP4](docs/media/demo.mp4)) are Remotion projects in [`example/`](example), rendered by coldframe on GitHub machines (12 and 8).
 
 <p align="center">
   <img src="docs/media/actions-run.png" alt="A real coldframe run: Plan, 8 chunks in parallel, then Stitch + deliver" width="520">
