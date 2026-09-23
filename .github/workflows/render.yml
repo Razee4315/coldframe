@@ -80,7 +80,7 @@ env:
 jobs:
   plan:
     name: Plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       total: ${{ steps.plan.outputs.total }}
@@ -90,9 +90,9 @@ jobs:
     steps:
       - id: clock
         run: echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with: { lfs: true }
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node-version }}
           cache: npm
@@ -164,7 +164,7 @@ jobs:
             console.table(include);
           })().catch((e) => { console.error(e); process.exit(1); });
           EOF
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: coldframe-bundle
           path: ${{ inputs.project-dir }}/coldframe-bundle
@@ -174,14 +174,14 @@ jobs:
   chunk:
     name: Chunk ${{ matrix.index }} (${{ matrix.start }}-${{ matrix.end }})
     needs: plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: true
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps: &renderSteps
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with: { lfs: true }
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node-version }}
           cache: npm
@@ -191,7 +191,7 @@ jobs:
       - name: Install project
         working-directory: ${{ inputs.project-dir }}
         run: *install
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           name: coldframe-bundle
           path: ${{ inputs.project-dir }}/coldframe-bundle
@@ -212,7 +212,7 @@ jobs:
               --codec=h264 --muted --frames="$RANGE" --props="$PROPS" \
               --gl=${{ inputs.gl }} --concurrency=${{ inputs.concurrency }} ${{ inputs.extra-args }}
           fi
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: coldframe-part-${{ matrix.index }}
           path: ${{ inputs.project-dir }}/coldframe-out/*
@@ -222,7 +222,7 @@ jobs:
   audio:
     name: Audio
     needs: plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         include: [{ index: audio, start: 0, end: 0 }]
@@ -231,7 +231,7 @@ jobs:
   stitch:
     name: Stitch + deliver
     needs: [plan, chunk, audio]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       artifact: ${{ steps.name.outputs.artifact }}
     steps:
@@ -243,7 +243,7 @@ jobs:
           file="${OUT:-$COMP-${{ github.run_number }}.mp4}"
           echo "file=$file" >> "$GITHUB_OUTPUT"
           echo "artifact=${file%.mp4}" >> "$GITHUB_OUTPUT"
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           pattern: coldframe-part-*
           path: parts
@@ -269,7 +269,7 @@ jobs:
           frames=$(ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of default=nw=1:nk=1 "final/$FILE" | tr -dc 0-9)
           echo "Frames in output: $frames (expected $TOTAL)"
           if [ "$frames" != "$TOTAL" ]; then echo "::error::Frame count mismatch: $frames != $TOTAL"; exit 1; fi
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.name.outputs.artifact }}
           path: final/${{ steps.name.outputs.file }}
