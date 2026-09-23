@@ -327,7 +327,7 @@
           </div>
           <video id="demo" src="media/demo.mp4" poster="media/poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="coldframe demo video"></video>
         </div>
-        <p class="caption">This video was rendered by coldframe: <b>480 frames on 8 GitHub runners</b>, joined, verified and downloaded with one command. <a href="https://github.com/Razee4315/coldframe/actions/runs/35857774301">See the run</a></p>
+        <p class="caption">This video was rendered by coldframe: <b>480 frames on 8 GitHub runners</b>, joined, verified and downloaded with one command. <a href="https://github.com/Razee4315/coldframe/actions/runs/35858298652">See the run</a></p>
       </div>
     </div>
   </div>
@@ -386,11 +386,11 @@
 
       <div class="shots2">
         <figure class="shot" style="margin:0">
-          <img src="media/actions-run.png" alt="GitHub Actions run graph: Plan, eight Chunk jobs and an Audio job in parallel, then Stitch + deliver" loading="lazy" width="1796" height="1452">
+          <img src="media/actions-run.png" alt="GitHub Actions run graph: Plan, eight Chunk jobs and an Audio job in parallel, then Stitch + deliver" loading="lazy" width="1796" height="1376">
           <figcaption>A real run of the demo above: plan, 8 chunks in parallel, then stitch.</figcaption>
         </figure>
         <figure class="shot" style="margin:0">
-          <img src="media/cli.png" alt="Terminal: coldframe render starts the run, waits for the eight chunks and the stitch, then saves the MP4" loading="lazy" width="2204" height="1220">
+          <img src="media/cli.png" alt="Terminal: coldframe render starts the run, waits for the eight chunks and the stitch, then saves the MP4" loading="lazy" width="2204" height="1168">
           <figcaption>One command from your terminal: start, wait, download.</figcaption>
         </figure>
       </div>
@@ -467,12 +467,13 @@ cf.to_drive(<span class="s">"coldframe"</span>)         <span class="c"># My Dri
           <thead><tr><th>Measured</th><th>Laptop (i7, 4 cores / 8 threads)</th><th>coldframe on Actions</th></tr></thead>
           <tbody>
             <tr><td>16 s demo above<br><span class="small">480 frames, 1080p, 30 fps</span></td><td class="num">57 s</td><td class="num">1 min 42 s <span class="small">(8 machines)</span></td></tr>
-            <tr><td>88 s launch film<br><span class="small">5,280 frames, 1080p, 60 fps, three.js 360° scenes</span></td><td class="num">12–20 min, fans at full speed</td><td class="num"><span class="good">{{BIG}}</span></td></tr>
+            <tr><td>88 s launch film<br><span class="small">5,280 frames, 1080p, 60 fps, three.js 360° scenes</span></td><td class="num">12–20 min, fans at full speed</td><td class="num">23 min 52 s <span class="small">(20 machines, private repo)</span></td></tr>
             <tr><td>Your computer while it renders</td><td>Busy and hot</td><td><span class="good">Free, can even be switched off</span></td></tr>
+            <tr><td>Output check</td><td class="num">–</td><td class="num"><span class="good">5,290 / 5,290 frames, median 54.9 dB PSNR vs. the laptop render</span></td></tr>
           </tbody>
         </table>
       </div>
-      <p class="note">Every machine spends about 40 s getting ready, so short clips are still faster at home. The longer and heavier the video, the more the split pays off.</p>
+      <p class="note">Honest numbers: every machine spends about 40 s getting ready, so short clips are faster at home. And cloud runners have no GPU, so three.js / WebGL scenes render in software: the 88 s film with 360° panoramas took longer in the cloud than on a laptop GPU. coldframe wins when your computer is needed for something else, or when the video is long and mostly HTML, video and images. Public repos get 4-vCPU runners, twice the private ones.</p>
     </section>
 
     <!-- CLAUDE -->
@@ -493,7 +494,7 @@ claude mcp add colab-mcp -- uvx git+https://github.com/googlecolab/colab-mcp</co
       <div class="faq">
         <details><summary>Is it really free?</summary><p>On public repos, GitHub Actions minutes on standard runners are free. Private repos get 2,000 free minutes a month, and every chunk counts, so 8 chunks of 3 minutes use 24 minutes. Colab's free tier has no fixed price but limits usage and doesn't promise a GPU.</p></details>
         <details><summary>Will the joins between chunks show?</summary><p>No. Remotion renders each frame on its own, so a frame looks the same whichever machine renders it. The video chunks are joined without re-encoding. Each chunk carries its slice of the audio as lossless PCM, so the joined soundtrack is bit-identical to a single-pass render, and the run fails if the final frame count doesn't match.</p></details>
-        <details><summary>Does three.js or WebGL work?</summary><p>Yes. Runners have no GPU, so Chrome uses SwiftShader through <code>--gl=swangle</code> (the default). It's slower than a GPU, which is exactly why splitting the work across machines helps.</p></details>
+        <details><summary>Does three.js or WebGL work?</summary><p>Yes, and the output matches a GPU render. But runners have no GPU, so Chrome draws WebGL in software (<code>--gl=swangle</code>, the default), and heavy 3D scenes are slow. Measured: a chunk full of 360° panorama frames took 22 min, while chunks without them took 9. If your video is mostly 3D, render those shots once on a GPU (your laptop or Colab) and use the clips.</p></details>
         <details><summary>Why not Remotion Lambda?</summary><p>Lambda is faster and made for production, but it needs an AWS account and costs money per render. coldframe is for people who want free cloud renders from a plain GitHub repo.</p></details>
         <details><summary>Where do my files go? Are they private?</summary><p>Your project stays in your own repo. Use a private repo if the footage is confidential. Rendered chunks are temporary artifacts deleted after a day, and the final MP4 stays on the run (90 days by default) and in your own Drive.</p></details>
         <details><summary>What about Remotion's license?</summary><p>coldframe is MIT licensed. Remotion has its own license: it's free for individuals and companies of up to 3 people. Larger companies need a <a href="https://www.remotion.pro/license">company license</a>.</p></details>

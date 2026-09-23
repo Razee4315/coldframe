@@ -166,9 +166,13 @@ Measured, not estimated. Laptop: Intel i7-7820HQ, 4 cores / 8 threads.
 | Video | Laptop | coldframe |
 |---|---|---|
 | 16 s demo, 480 frames, 1080p30 | **57 s** | 1 min 42 s on 8 machines ([run](https://github.com/Razee4315/coldframe/actions/runs/35857774301)) |
-| 88 s launch film, 5,280 frames, 1080p60, three.js 360° scenes | 12–20 min | {{BIG}} |
+| 88 s launch film, 5,290 frames, 1080p60, three.js 360° scenes | 12–20 min | 23 min 52 s on 20 machines (private repo, 2 vCPU each) |
 
-Each machine spends about 40 s getting ready (checkout, cached `npm ci`, downloading the bundle), so **short clips are still faster at home**. The longer and heavier the video, the more the split pays off. And either way, your computer is free while it renders.
+Each machine spends about 40 s getting ready (checkout, cached `npm ci`, downloading the bundle), so **short clips are faster at home**. And GitHub runners have **no GPU**: WebGL / three.js draws in software, so the 360°-heavy film was slower in the cloud than on the laptop's GPU. Its chunks with panoramas took up to 22 min, and those without took 9. Public repos get 4-vCPU runners, twice what private repos get.
+
+coldframe wins when you need your computer for something else while a video renders, and for long videos made mostly of HTML, images and footage. For 3D-heavy videos, render the 3D shots once on a GPU and drop them in as clips.
+
+The cloud render of the film matched the laptop render: 5,290 / 5,290 frames, median PSNR 54.9 dB. 14 frames differed visibly, all at transitions where the film's own components keep state between frames, which Remotion asks you to avoid.
 
 ## FAQ
 
@@ -176,7 +180,7 @@ Each machine spends about 40 s getting ready (checkout, cached `npm ci`, downloa
 
 **Will the joins show?** No. Remotion renders each frame on its own, video chunks are joined without re-encoding, and each chunk carries its audio slice as 16-bit PCM. Joined, those slices are bit-identical to a single-pass audio render (tested: 768,000 of 768,000 samples match). A wrong frame count fails the run.
 
-**Does WebGL / three.js work?** Yes, through SwiftShader (`--gl=swangle`). It's slower than a GPU, which is exactly why splitting the work helps.
+**Does WebGL / three.js work?** Yes, through SwiftShader (`--gl=swangle`), and it matches a GPU render. It's slow, though, so see the benchmarks above.
 
 **Why not Remotion Lambda?** Lambda is faster and made for production, but needs AWS and costs money per render. coldframe is for free renders from a plain GitHub repo.
 
