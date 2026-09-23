@@ -171,8 +171,10 @@ def status(tail: int = 12) -> str:
 
 _GPU_CHECK = r"""
 cd {project}
-npx remotion browser ensure --chrome-mode=chrome-for-testing >/dev/null 2>&1 || true
+# `browser ensure` ignores --chrome-mode; `remotion gpu` downloads Chrome for Testing.
+npx remotion gpu --chrome-mode=chrome-for-testing --gl=vulkan >/dev/null 2>&1 || true
 C=$(find node_modules/.remotion -path "*chrome-for-testing*" -name chrome -type f | head -1)
+[ -n "$C" ] || {{ echo "Chrome for Testing not found"; exit 1; }}
 cat > /tmp/cf-gl.html <<'EOF'
 <body><script>
 const g = document.createElement('canvas').getContext('webgl'); let r = 'none';
