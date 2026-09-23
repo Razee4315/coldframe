@@ -1,0 +1,13 @@
+{
+  "name": "coldframe",
+  "version": "1.0.0",
+  "description": "Render Remotion videos on free cloud machines: parallel GitHub Actions renders, Google Colab via MCP, delivery to Google Drive.",
+  "type": "module",
+  "bin": { "coldframe": "bin/coldframe.mjs" },
+  "files": ["bin", "templates"],
+  "keywords": ["remotion", "render", "github-actions", "colab", "video", "distributed-rendering"],
+  "repository": "github:Razee4315/coldframe",
+  "homepage": "https://razee4315.github.io/coldframe/",
+  "license": "MIT",
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,314 @@
+# coldframe: distributed Remotion render on GitHub Actions.
+#
+# plan    bundles the project once and splits the frames into N ranges
+# chunk   renders one frame range per runner, all in parallel (video only)
+# audio   renders the full soundtrack once, so chunk seams never click
+# stitch  joins the chunks losslessly, muxes the audio, verifies the frame
+#         count, uploads the MP4 as an artifact and (optionally) to Google Drive
+#
+# Call it from any Remotion repo:
+#   jobs:
+#     render:
+#       uses: Razee4315/coldframe/.github/workflows/render.yml@main
+#       with: { composition: MyComp, chunks: 8 }
+#       secrets: inherit
+
+name: coldframe render
+
+on:
+  workflow_call:
+    inputs:
+      composition:
+        description: Composition id to render
+        type: string
+        required: true
+      chunks:
+        description: Number of parallel render machines (1-20)
+        type: number
+        default: 8
+      project-dir:
+        description: Folder containing the Remotion project (package.json)
+        type: string
+        default: "."
+      entry-point:
+        description: Remotion entry file, relative to project-dir (blank = auto)
+        type: string
+        default: ""
+      props:
+        description: JSON input props
+        type: string
+        default: "{}"
+      output-name:
+        description: File name of the final MP4 (blank = <composition>-<run>.mp4)
+        type: string
+        default: ""
+      gl:
+        description: OpenGL backend for Chrome (swangle works on CPU-only runners; needed for three.js/WebGL)
+        type: string
+        default: swangle
+      concurrency:
+        description: Remotion --concurrency per machine
+        type: string
+        default: "100%"
+      extra-args:
+        description: Extra flags passed to every `remotion render` (e.g. --crf=16)
+        type: string
+        default: ""
+      min-frames-per-chunk:
+        description: Never make a chunk shorter than this
+        type: number
+        default: 60
+      drive-folder:
+        description: rclone destination (remote:path). Used only when the RCLONE_CONF secret is set
+        type: string
+        default: "gdrive:coldframe"
+      node-version:
+        type: string
+        default: "22"
+    secrets:
+      RCLONE_CONF:
+        description: Contents of an rclone.conf with a Google Drive remote (optional)
+        required: false
+    outputs:
+      artifact:
+        description: Name of the artifact holding the final MP4
+        value: ${{ jobs.stitch.outputs.artifact }}
+
+env:
+  FORCE_COLOR: "0"
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      total: ${{ steps.plan.outputs.total }}
+      fps: ${{ steps.plan.outputs.fps }}
+      size: ${{ steps.plan.outputs.size }}
+      started: ${{ steps.plan.outputs.started }}
+    steps:
+      - id: clock
+        run: echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with: { lfs: true }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.project-dir }}/package-lock.json
+      - name: Install Chrome dependencies
+        run: &linuxdeps |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libnss3 libdbus-1-3 libatk1.0-0t64 libatk-bridge2.0-0t64 libgbm1 libasound2t64 \
+            libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 libcups2t64 \
+            libpango-1.0-0 libcairo2 fonts-noto-color-emoji > /dev/null
+      - name: Install project
+        working-directory: ${{ inputs.project-dir }}
+        run: &install |
+          npm ci --no-audit --no-fund
+          # npm often drops other-platform optional binaries from lockfiles made on
+          # Windows/macOS (npm/cli#4828). Add the Linux ones if they are missing.
+          fix() { # $1 = package whose version to match, $2 = linux package
+            [ -f "node_modules/$1/package.json" ] || return 0
+            [ -d "node_modules/$2" ] && return 0
+            v=$(node -p "require('./node_modules/$1/package.json').version")
+            echo "Adding missing $2@$v"; npm i --no-save --no-audit --no-fund "$2@$v"
+          }
+          fix @rspack/binding @rspack/binding-linux-x64-gnu
+          fix @remotion/renderer @remotion/compositor-linux-x64-gnu
+      - name: Bundle
+        working-directory: ${{ inputs.project-dir }}
+        run: npx remotion bundle ${{ inputs.entry-point }} --out-dir=coldframe-bundle
+      - name: Split frames
+        id: plan
+        working-directory: ${{ inputs.project-dir }}
+        env:
+          COMPOSITION: ${{ inputs.composition }}
+          CHUNKS: ${{ inputs.chunks }}
+          MIN_FRAMES: ${{ inputs.min-frames-per-chunk }}
+          PROPS: ${{ inputs.props }}
+          GL: ${{ inputs.gl }}
+          STARTED: ${{ steps.clock.outputs.started }}
+        run: |
+          node - <<'EOF'
+          const path = require("path");
+          const fs = require("fs");
+          const req = require("module").createRequire(path.resolve("package.json"));
+          const { selectComposition } = req("@remotion/renderer");
+          (async () => {
+            const comp = await selectComposition({
+              serveUrl: path.resolve("coldframe-bundle"),
+              id: process.env.COMPOSITION,
+              inputProps: JSON.parse(process.env.PROPS || "{}"),
+              chromiumOptions: { gl: process.env.GL || null },
+            });
+            const total = comp.durationInFrames;
+            const want = Math.max(1, Math.min(20, Number(process.env.CHUNKS) || 1));
+            const n = Math.max(1, Math.min(want, Math.floor(total / Math.max(1, Number(process.env.MIN_FRAMES) || 1))));
+            const per = Math.ceil(total / n);
+            const include = [];
+            for (let i = 0, start = 0; start < total; i++, start += per) {
+              include.push({ index: String(i).padStart(2, "0"), start, end: Math.min(total, start + per) - 1 });
+            }
+            const out = [
+              `matrix=${JSON.stringify({ include })}`,
+              `total=${total}`,
+              `fps=${comp.fps}`,
+              `size=${comp.width}x${comp.height}`,
+              `started=${process.env.STARTED}`,
+            ];
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, out.join("\n") + "\n");
+            console.log(`${comp.id}: ${total} frames @ ${comp.fps} fps, ${comp.width}x${comp.height} -> ${include.length} chunks`);
+            console.table(include);
+          })().catch((e) => { console.error(e); process.exit(1); });
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coldframe-bundle
+          path: ${{ inputs.project-dir }}/coldframe-bundle
+          retention-days: 1
+          include-hidden-files: true
+
+  chunk:
+    name: Chunk ${{ matrix.index }} (${{ matrix.start }}-${{ matrix.end }})
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps: &renderSteps
+      - uses: actions/checkout@v4
+        with: { lfs: true }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.project-dir }}/package-lock.json
+      - name: Install Chrome dependencies
+        run: *linuxdeps
+      - name: Install project
+        working-directory: ${{ inputs.project-dir }}
+        run: *install
+      - uses: actions/download-artifact@v4
+        with:
+          name: coldframe-bundle
+          path: ${{ inputs.project-dir }}/coldframe-bundle
+      - name: Render
+        working-directory: ${{ inputs.project-dir }}
+        env:
+          COMPOSITION: ${{ inputs.composition }}
+          PROPS: ${{ inputs.props }}
+          RANGE: ${{ matrix.start }}-${{ matrix.end }}
+          INDEX: ${{ matrix.index }}
+        run: |
+          mkdir -p coldframe-out
+          if [ "$INDEX" = "audio" ]; then
+            npx remotion render coldframe-bundle "$COMPOSITION" coldframe-out/audio.wav \
+              --codec=wav --props="$PROPS" --gl=${{ inputs.gl }} ${{ inputs.extra-args }}
+          else
+            npx remotion render coldframe-bundle "$COMPOSITION" "coldframe-out/chunk-$INDEX.mp4" \
+              --codec=h264 --muted --frames="$RANGE" --props="$PROPS" \
+              --gl=${{ inputs.gl }} --concurrency=${{ inputs.concurrency }} ${{ inputs.extra-args }}
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coldframe-part-${{ matrix.index }}
+          path: ${{ inputs.project-dir }}/coldframe-out/*
+          retention-days: 1
+          compression-level: 0
+
+  audio:
+    name: Audio
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: [{ index: audio, start: 0, end: 0 }]
+    steps: *renderSteps
+
+  stitch:
+    name: Stitch + deliver
+    needs: [plan, chunk, audio]
+    runs-on: ubuntu-latest
+    outputs:
+      artifact: ${{ steps.name.outputs.artifact }}
+    steps:
+      - id: name
+        env:
+          OUT: ${{ inputs.output-name }}
+          COMP: ${{ inputs.composition }}
+        run: |
+          file="${OUT:-$COMP-${{ github.run_number }}.mp4}"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "artifact=${file%.mp4}" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coldframe-part-*
+          path: parts
+          merge-multiple: true
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg > /dev/null
+      - name: Join chunks and mux audio
+        env:
+          FILE: ${{ steps.name.outputs.file }}
+          TOTAL: ${{ needs.plan.outputs.total }}
+        run: |
+          set -euo pipefail
+          ls -la parts
+          for f in parts/chunk-*.mp4; do echo "file '$PWD/$f'"; done | sort > list.txt
+          ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i list.txt -c copy video.mp4
+          mkdir -p final
+          if [ -s parts/audio.wav ]; then
+            ffmpeg -hide_banner -loglevel error -i video.mp4 -i parts/audio.wav \
+              -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest -movflags +faststart "final/$FILE"
+          else
+            ffmpeg -hide_banner -loglevel error -i video.mp4 -c copy -movflags +faststart "final/$FILE"
+          fi
+          frames=$(ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 "final/$FILE")
+          echo "Frames in output: $frames (expected $TOTAL)"
+          if [ "$frames" != "$TOTAL" ]; then echo "::error::Frame count mismatch: $frames != $TOTAL"; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.artifact }}
+          path: final/${{ steps.name.outputs.file }}
+          compression-level: 0
+      - name: Upload to Google Drive
+        id: drive
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+          DEST: ${{ inputs.drive-folder }}
+          FILE: ${{ steps.name.outputs.file }}
+        run: |
+          if [ -z "$RCLONE_CONF" ]; then echo "No RCLONE_CONF secret, skipping Drive."; echo "dest=" >> "$GITHUB_OUTPUT"; exit 0; fi
+          curl -fsSL https://rclone.org/install.sh | sudo bash > /dev/null
+          mkdir -p ~/.config/rclone && printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+          rclone copyto "final/$FILE" "$DEST/$FILE" --stats-one-line -v
+          echo "dest=$DEST/$FILE" >> "$GITHUB_OUTPUT"
+      - name: Summary
+        env:
+          FILE: ${{ steps.name.outputs.file }}
+          STARTED: ${{ needs.plan.outputs.started }}
+          TOTAL: ${{ needs.plan.outputs.total }}
+          FPS: ${{ needs.plan.outputs.fps }}
+          SIZE: ${{ needs.plan.outputs.size }}
+          MATRIX: ${{ needs.plan.outputs.matrix }}
+          DRIVE: ${{ steps.drive.outputs.dest }}
+        run: |
+          secs=$(( $(date +%s) - STARTED ))
+          chunks=$(echo "$MATRIX" | jq '.include | length')
+          mb=$(du -m "final/$FILE" | cut -f1)
+          {
+            echo "## coldframe render finished"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Composition | \`${{ inputs.composition }}\` ($SIZE, $FPS fps) |"
+            echo "| Frames | $TOTAL ($(awk "BEGIN{printf \"%.1f\", $TOTAL/$FPS}") s of video) |"
+            echo "| Machines | $chunks in parallel + 1 audio |"
+            echo "| Wall time | $((secs/60)) min $((secs%60)) s |"
+            echo "| Output | \`$FILE\` ($mb MB), artifact \`${FILE%.mp4}\` |"
+            [ -n "$DRIVE" ] && echo "| Google Drive | \`$DRIVE\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_STEP_SUMMARY"

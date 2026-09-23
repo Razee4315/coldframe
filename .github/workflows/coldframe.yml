@@ -1,0 +1,31 @@
+# Renders the demo project in example/ with this repo's own workflow.
+# Same inputs as templates/coldframe.yml, so `coldframe render ColdframePromo` works here too.
+
+name: coldframe
+
+on:
+  workflow_dispatch:
+    inputs:
+      composition:
+        description: Composition id
+        default: ColdframePromo
+      chunks:
+        description: Parallel machines (1-20)
+        default: "8"
+      props:
+        description: Input props (JSON)
+        default: "{}"
+      output-name:
+        description: Output file name (optional)
+        default: ""
+
+jobs:
+  render:
+    uses: ./.github/workflows/render.yml
+    with:
+      composition: ${{ inputs.composition }}
+      chunks: ${{ fromJSON(inputs.chunks) }}
+      props: ${{ inputs.props }}
+      output-name: ${{ inputs.output-name }}
+      project-dir: example
+    secrets: inherit

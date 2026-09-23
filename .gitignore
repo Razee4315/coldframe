@@ -1,0 +1,9 @@
+node_modules/
+out/
+build/
+coldframe-bundle/
+coldframe-out/
+.env
+*.log
+.DS_Store
+__pycache__/
