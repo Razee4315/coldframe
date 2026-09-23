@@ -1,0 +1,367 @@
+{
+  "_about": "coldframe sound-effect library. All CC0. `peakMs` = time from file start to its loudest point, so a whoosh can be started early to peak on the fastest frame. Levels are pre-matched; `gain` is the suggested starting volume under a music bed.",
+  "sampleRate": 48000,
+  "roles": {
+    "click-soft": {
+      "use": "Cursor click on a small control: tab, link, icon, menu item",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "click-soft-1.wav",
+          "ms": 68,
+          "peakMs": 19,
+          "source": "Kenney \u00b7 UI Audio (click1.ogg) https://kenney.nl/assets/ui-audio",
+          "license": "CC0"
+        },
+        {
+          "file": "click-soft-2.wav",
+          "ms": 63,
+          "peakMs": 8,
+          "source": "Kenney \u00b7 UI Audio (click3.ogg) https://kenney.nl/assets/ui-audio",
+          "license": "CC0"
+        },
+        {
+          "file": "click-soft-3.wav",
+          "ms": 38,
+          "peakMs": 8,
+          "source": "Kenney \u00b7 UI Audio (click4.ogg) https://kenney.nl/assets/ui-audio",
+          "license": "CC0"
+        }
+      ]
+    },
+    "click-firm": {
+      "use": "Press on a primary button: Run, Render, Deploy, the CTA",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "click-firm-1.wav",
+          "ms": 12,
+          "peakMs": 0,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (click_002.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "click-firm-2.wav",
+          "ms": 7,
+          "peakMs": 0,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (click_003.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "click-firm-3.wav",
+          "ms": 7,
+          "peakMs": 1,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (click_005.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "tick": {
+      "use": "Hover, focus or a selection moving; very light",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "tick-1.wav",
+          "ms": 38,
+          "peakMs": 1,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (tick_001.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "tick-2.wav",
+          "ms": 20,
+          "peakMs": 1,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (tick_002.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "key": {
+      "use": "One keystroke while typing (rotate variants, one per 1-3 characters)",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "key-1.wav",
+          "ms": 25,
+          "peakMs": 5,
+          "source": "Kenney \u00b7 UI Audio (switch13.ogg) https://kenney.nl/assets/ui-audio",
+          "license": "CC0"
+        },
+        {
+          "file": "key-2.wav",
+          "ms": 35,
+          "peakMs": 7,
+          "source": "Kenney \u00b7 UI Audio (switch14.ogg) https://kenney.nl/assets/ui-audio",
+          "license": "CC0"
+        },
+        {
+          "file": "key-3.wav",
+          "ms": 84,
+          "peakMs": 26,
+          "source": "Kenney \u00b7 UI Audio (switch29.ogg) https://kenney.nl/assets/ui-audio",
+          "license": "CC0"
+        },
+        {
+          "file": "key-4.wav",
+          "ms": 108,
+          "peakMs": 17,
+          "source": "Kenney \u00b7 UI Audio (switch10.ogg) https://kenney.nl/assets/ui-audio",
+          "license": "CC0"
+        }
+      ]
+    },
+    "key-enter": {
+      "use": "Enter / Return at the end of a typed command",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "key-enter-1.wav",
+          "ms": 183,
+          "peakMs": 74,
+          "source": "Kenney \u00b7 UI Audio (switch16.ogg) https://kenney.nl/assets/ui-audio",
+          "license": "CC0"
+        },
+        {
+          "file": "key-enter-2.wav",
+          "ms": 214,
+          "peakMs": 94,
+          "source": "Kenney \u00b7 UI Audio (switch31.ogg) https://kenney.nl/assets/ui-audio",
+          "license": "CC0"
+        }
+      ]
+    },
+    "toggle-on": {
+      "use": "Switch or checkbox turning on",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "toggle-on.wav",
+          "ms": 123,
+          "peakMs": 0,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (toggle_002.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "toggle-off": {
+      "use": "Switch or checkbox turning off",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "toggle-off.wav",
+          "ms": 124,
+          "peakMs": 7,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (toggle_001.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "select": {
+      "use": "Item picked in a list, option chosen",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "select-1.wav",
+          "ms": 40,
+          "peakMs": 2,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (select_001.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "select-2.wav",
+          "ms": 40,
+          "peakMs": 2,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (select_002.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "drop": {
+      "use": "Card or panel lands and snaps into place",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "drop-1.wav",
+          "ms": 93,
+          "peakMs": 0,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (drop_002.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "drop-2.wav",
+          "ms": 95,
+          "peakMs": 0,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (drop_003.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "drop-3.wav",
+          "ms": 116,
+          "peakMs": 1,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (drop_004.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "pop": {
+      "use": "Notification, badge or small item appearing",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "pop-1.wav",
+          "ms": 91,
+          "peakMs": 0,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (glass_002.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "pop-2.wav",
+          "ms": 77,
+          "peakMs": 0,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (glass_005.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "confirm": {
+      "use": "Success, verified, done: the one reward sound",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "confirm-1.wav",
+          "ms": 290,
+          "peakMs": 1,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (confirmation_001.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "confirm-2.wav",
+          "ms": 504,
+          "peakMs": 0,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (confirmation_002.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "error": {
+      "use": "Failure shown on screen; short and low",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "error.wav",
+          "ms": 147,
+          "peakMs": 15,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (error_005.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "open": {
+      "use": "Panel, window or modal expanding (swells into its peak)",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "open-1.wav",
+          "ms": 253,
+          "peakMs": 240,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (maximize_002.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "open-2.wav",
+          "ms": 225,
+          "peakMs": 154,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (maximize_008.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "close": {
+      "use": "Panel, window or modal collapsing",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "close-1.wav",
+          "ms": 258,
+          "peakMs": 1,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (minimize_002.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "close-2.wav",
+          "ms": 209,
+          "peakMs": 55,
+          "source": "Kenney \u00b7 Interface Sounds 1.0 (minimize_008.ogg) https://kenney.nl/assets/interface-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "whoosh": {
+      "use": "Camera move, fly-in, whip pan, fast slide",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "whoosh-1.wav",
+          "ms": 125,
+          "peakMs": 49,
+          "source": "https://freesound.org/s/831936/ (1bob) via remotion.media/whoosh.wav",
+          "license": "CC0"
+        },
+        {
+          "file": "whoosh-2.wav",
+          "ms": 172,
+          "peakMs": 25,
+          "source": "https://freesound.org/s/838766/ via remotion.media/whip.wav",
+          "license": "CC0"
+        }
+      ]
+    },
+    "impact-soft": {
+      "use": "Element lands with weight; beat accent",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "impact-soft-1.wav",
+          "ms": 115,
+          "peakMs": 5,
+          "source": "Kenney \u00b7 Impact Sounds (impactSoft_medium_000.ogg) https://kenney.nl/assets/impact-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "impact-soft-2.wav",
+          "ms": 132,
+          "peakMs": 5,
+          "source": "Kenney \u00b7 Impact Sounds (impactSoft_medium_002.ogg) https://kenney.nl/assets/impact-sounds",
+          "license": "CC0"
+        }
+      ]
+    },
+    "impact": {
+      "use": "The one big moment: palette impact, reveal, logo",
+      "gain": 1.0,
+      "variants": [
+        {
+          "file": "impact-1.wav",
+          "ms": 369,
+          "peakMs": 6,
+          "source": "Kenney \u00b7 Impact Sounds (impactSoft_heavy_002.ogg) https://kenney.nl/assets/impact-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "impact-2.wav",
+          "ms": 346,
+          "peakMs": 7,
+          "source": "Kenney \u00b7 Impact Sounds (impactSoft_heavy_003.ogg) https://kenney.nl/assets/impact-sounds",
+          "license": "CC0"
+        },
+        {
+          "file": "impact-3.wav",
+          "ms": 274,
+          "peakMs": 16,
+          "source": "Kenney \u00b7 Impact Sounds (impactPunch_heavy_002.ogg) https://kenney.nl/assets/impact-sounds",
+          "license": "CC0"
+        }
+      ]
+    }
+  }
+}
