@@ -7,6 +7,8 @@ description: Rules for product, launch, explainer and social videos (Remotion or
 
 The goal is a video that looks designed by a person with taste, not assembled from the default AI toolkit. Restraint beats motion: if everything moves, nothing stands out.
 
+This skill says **what** to show and what to avoid. `motion-direction` says **how** to make it move like a real motion-design film (camera, depth, transitions, two-pass workflow with styleframes), and `sound-design` covers audio. Use all three.
+
 ## 1. Decide before designing
 
 Write these four lines at the top of the plan. If one is missing, ask.
@@ -39,15 +41,16 @@ Each of these is fine once, on purpose. Together they read as "made by a templat
 
 - Opening with a logo animation or "Hi, welcome to…"
 - Near-black background + white text + purple/indigo accent + Inter. Use the real brand palette and fonts.
-- Glow, bloom, lens flares, floating particles or bokeh.
-- Spring overshoot "pop-in" on every element, every element staggered.
+- Glow, bloom, lens flares, floating particles or bokeh as decoration. (One motivated light sweep or a brief burst behind a result is fine; see `motion-direction`.)
+- Spring overshoot "pop-in" on every element, every element staggered. (Overshoot is for confirmations only.)
 - The same soft fade between every scene.
 - A self-drawing underline or highlighter swipe in every scene. **Max one per video**, two if long.
 - Word-by-word yellow-keyword captions bouncing in (the CapCut/Hormozi preset). If captions are needed, use calm 2–4 word chunks held 600–900 ms.
 - Rotating 3D laptop/phone mockups as filler.
 - Fake cursors wandering around, arrows and boxes on everything.
 - Count-up numbers for things that aren't the key stat.
-- Generic upbeat stock music with no sound effects.
+- Generic upbeat stock music with no sound effects, or sound generated from code (sine beeps, noise "whooshes").
+- Flat slides: text and boxes fading in on a still background, no camera, no depth. That reads as a slideshow, not a film.
 - AI-generated footage of the product itself, or anything showing features the product doesn't have.
 - Raw, full-screen dashboards that are unreadable on a phone.
 
@@ -58,6 +61,7 @@ Each of these is fine once, on purpose. Together they read as "made by a templat
 - **Hold time:** text stays readable at least 1.5 s after it lands.
 - **Emphasis:** one key word per line, by colour or weight. Pick one emphasis technique per video (underline, highlighter, strike-and-replace, or colour pop) and use it only where it carries meaning.
 - **Motion language:** one easing family for the whole video (e.g. expo-out). Calm entrances: mask reveal, blur-to-sharp, short slide. Motion only where it explains something.
+- **Camera and depth:** give the film a camera (push-ins, arcs, parallax across 3+ depth planes). Build it as described in `motion-direction`.
 - **Transitions:** mix them and give each a reason. Hard cut on a beat, match cut (a shape becomes the next scene), zoom into the element that matters, wipe with a brand shape. Never the same transition every time.
 - **Pacing:** something changes every 2–4 s (a cut, a zoom, a new element), but no scene is busy.
 
@@ -79,13 +83,7 @@ Each of these is fine once, on purpose. Together they read as "made by a templat
 
 ## 7. Audio
 
-- Sound effects matter as much as music: soft whoosh on transitions, click on clicks, pop on text, a small chime on success, a riser into the reveal.
-- Cut on the beat. A beat of silence right before the reveal lands hard.
-- Duck the music under voiceover. Fade out cleanly on the end card.
-- Burn in captions for social (70–85% watch muted). Ship an SRT for YouTube and web.
-- **Don't synthesise the soundtrack in code.** Sound built from numpy noise and sine waves (the "laptop fan hum", pads, pings in `make_soundtrack.py` / `make_launch_soundtrack.py`) sounded bad on the launch film and was cut. Use real, produced music and SFX that the user supplies or picks (royalty-free or licensed), or no sound at all.
-- **Silent by default** for the website hero, README and anything that autoplays muted. Design every video to work with no sound.
-- Before a full render with sound, send the user a 10–15 s audio sample and wait for their OK.
+Follow the `sound-design` skill. In short: a soft music bed the user picked, a real recorded sound for every visible click, keystroke, toggle, landing, success and camera move, one impact for the big moment, about -14 LUFS with true peak ≤ -1 dBTP, and an audio sample approved by the user before the full render. Never synthesise music or effects in code. The video must still work muted; README and website-hero versions ship silent. Burn in captions if there's a voiceover (calm 2–4 word chunks) and ship an SRT.
 
 ## 8. Brand and CTA
 
@@ -121,7 +119,8 @@ Answer each with yes. Fix anything that isn't.
 - [ ] Transitions are mixed and each has a reason.
 - [ ] No screen has more than 7 words. Every text holds 1.5 s or more after landing.
 - [ ] Readable on a phone (check a frame at 390 px wide).
-- [ ] Sound effects on transitions and key moments, audio doesn't clip.
+- [ ] `sound-design` checklist passed: music bed, a sound for every action, measured loudness, sample approved.
+- [ ] `motion-direction` checklist passed: directions → beat sheet → styleframes approved; camera and depth; one signature transition.
 - [ ] Captions burned in if there's speech.
 - [ ] Ends on one specific CTA with a readable URL.
 - [ ] Rendered in every format the placement needs.

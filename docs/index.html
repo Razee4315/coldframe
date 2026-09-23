@@ -227,7 +227,7 @@
     <nav>
       <a href="#how">How it works</a>
       <a href="#setup">Setup</a>
-      <a href="#connect">Drive &amp; Colab</a>
+      <a href="#connect">Google Drive</a>
       <a href="#rules">Video rules</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -344,7 +344,7 @@
           <ul>
             <li>signs you in to GitHub (you paste a code in your browser)</li>
             <li>puts your project on GitHub if it isn't there yet</li>
-            <li>adds the render workflow, the Claude Code skills and the Colab connection</li>
+            <li>adds the render workflow and the Claude Code skills</li>
             <li>optionally connects Google Drive</li>
           </ul>
 <pre><button class="copy">Copy</button><code>npx github:Razee4315/coldframe setup</code></pre>
@@ -360,10 +360,10 @@
     <!-- CONNECT -->
     <section class="block" id="connect">
       <div class="kicker">Optional</div>
-      <h2>Google Drive and Colab. <span class="dim">A few clicks each.</span></h2>
-      <p class="intro">Neither needs a password or key copied anywhere. You sign in to Google in your browser, and that's it.</p>
+      <h2>Google Drive. <span class="dim">A few clicks.</span></h2>
+      <p class="intro">No password or key is copied anywhere. You sign in to Google in your browser, and that's it.</p>
 
-      <div class="grid-2">
+      <div class="grid-2" style="grid-template-columns: 1fr; max-width: 640px;">
         <div class="card">
           <span class="tag">Save renders to Drive</span>
           <h3>Google Drive</h3>
@@ -376,18 +376,6 @@ brew install rclone            <span class="c"># macOS</span></code></pre></li>
 <pre><button class="copy">Copy</button><code>npx github:Razee4315/coldframe drive</code></pre></li>
             <li>A Google page opens. Pick your account and click <b>Allow</b>. coldframe can only see files it creates itself, not the rest of your Drive.</li>
           </ol>
-        </div>
-        <div class="card">
-          <span class="tag">Free GPU · experimental</span>
-          <h3>Google Colab</h3>
-          <p>A free cloud computer, sometimes with a T4 GPU. Useful for 3D (WebGL / three.js) scenes, which GitHub's machines render without a GPU.</p>
-          <ol>
-            <li>Install <a href="https://docs.astral.sh/uv/">uv</a>: <code>winget install astral-sh.uv</code> or <code>brew install uv</code>.</li>
-            <li>Open your project in Claude Code and approve the <b>colab-mcp</b> server (setup added it).</li>
-            <li>Stay signed in to Google in your browser, then ask Claude: <i>"render MyVideo on Colab"</i>. A Colab tab opens and connects by itself.</li>
-            <li>For the GPU: in that tab, <b>Runtime → Change runtime type → T4 GPU</b>.</li>
-          </ol>
-          <div class="foot"><a class="btn" href="https://colab.research.google.com/github/Razee4315/coldframe/blob/main/colab/coldframe.ipynb">Or run the notebook yourself</a></div>
         </div>
       </div>
     </section>
@@ -406,7 +394,7 @@ brew install rclone            <span class="c"># macOS</span></code></pre></li>
           </tbody>
         </table>
       </div>
-      <p class="note">Each machine spends about 40 s getting ready, so short videos are still quicker at home. coldframe is for when you need your computer while a video renders, and for long videos made of text, UI, images and footage. For 3D-heavy videos, render the 3D shots once on a GPU (your laptop or Colab) and use them as clips.</p>
+      <p class="note">Each machine spends about 40 s getting ready, so short videos are still quicker at home. coldframe is for when you need your computer while a video renders, and for long videos made of text, UI, images and footage. For 3D-heavy videos, render the 3D shots once on your own GPU and use them as clips.</p>
     </section>
 
     <!-- RULES -->
@@ -433,7 +421,7 @@ brew install rclone            <span class="c"># macOS</span></code></pre></li>
       <div class="faq">
         <details><summary>Is it really free?</summary><p>Yes. On public repos, GitHub machines are free with no limit. Private repos get 2,000 free machine-minutes a month, and each machine counts separately (8 machines for 3 minutes = 24 minutes). If you run out, GitHub stops the job. You're never charged unless you add a payment method.</p></details>
         <details><summary>Will the joins between pieces show?</summary><p>No. Each frame is rendered on its own, the video pieces are joined without re-encoding, and each piece carries its audio as lossless PCM, so the soundtrack joins sample-exactly (tested bit-for-bit). If the final frame count is wrong, the run fails instead of giving you a broken file.</p></details>
-        <details><summary>Does three.js / WebGL work?</summary><p>Yes, and it looks the same as a GPU render, but GitHub's machines have no GPU, so 3D is drawn in software and is much slower. For 3D-heavy videos, try Colab's T4 GPU (<code>gpu=True</code> in the Colab helper, still experimental) or render the 3D shots once on your own GPU.</p></details>
+        <details><summary>Does three.js / WebGL work?</summary><p>Yes, and it looks the same as a GPU render, but GitHub's machines have no GPU, so 3D is drawn in software and is much slower. For 3D-heavy videos, render the 3D shots once on your own GPU and use them as clips.</p></details>
         <details><summary>What does coldframe get access to?</summary><p>On GitHub: only the repo you run it in. On Google Drive: only files coldframe creates itself (Google's <code>drive.file</code> access), stored as a secret in your repo. Temporary render pieces are deleted after a day.</p></details>
         <details><summary>Why not Remotion Lambda?</summary><p>Lambda is faster and built for production, but needs an AWS account and costs money per render. coldframe is for free renders from a plain GitHub repo.</p></details>
         <details><summary>What about Remotion's license?</summary><p>coldframe is MIT licensed. Remotion has its own license: free for individuals and companies of up to 3 people, larger companies need a <a href="https://www.remotion.pro/license">company license</a>.</p></details>

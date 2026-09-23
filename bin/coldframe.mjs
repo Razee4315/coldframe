@@ -166,14 +166,15 @@ async function setup() {
   addFile(path.join("templates", WORKFLOW), path.join(".github", "workflows", WORKFLOW));
   addFile(path.join(".claude", "skills", "coldframe", "SKILL.md"));
   addFile(path.join(".claude", "skills", "video-rules", "SKILL.md"));
-  addFile(".mcp.json");
+  addFile(path.join(".claude", "skills", "motion-direction", "SKILL.md"));
+  addFile(path.join(".claude", "skills", "sound-design", "SKILL.md"));
 
   step(5, "Google Drive (optional)");
   if ((await ask("Also save every render to your Google Drive? [y/N]", "n")).startsWith("y")) await drive({ repo });
   else console.log("  Skipped. Run `coldframe drive` any time to add it.");
 
   step(6, "Push");
-  run("git", ["add", ".github", ".claude", ".mcp.json"]);
+  run("git", ["add", ".github", ".claude"]);
   if (run("git", ["diff", "--cached", "--quiet"]).status !== 0) {
     run("git", ["commit", "-qm", "Add coldframe"]);
     const p = run("git", ["push"], { inherit: true });

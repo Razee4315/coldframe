@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://razee4315.github.io/coldframe/">Website</a> ·
   <a href="#setup">Setup</a> ·
-  <a href="#google-drive-and-colab-optional">Drive &amp; Colab</a> ·
+  <a href="#google-drive-optional">Google Drive</a> ·
   <a href="#video-rules">Video rules</a> ·
   <a href="#faq">FAQ</a>
 </p>
@@ -57,7 +57,7 @@ npx github:Razee4315/coldframe setup
 
 - signs you in to GitHub (you paste a code in your browser)
 - puts your project on GitHub if it isn't there yet
-- adds the render workflow, the Claude Code skills and the Colab connection
+- adds the render workflow and the Claude Code skills
 - optionally connects Google Drive
 
 **3. Render.** Use the `id` of your Remotion `<Composition>`. The MP4 lands in `out/cloud/`.
@@ -68,11 +68,9 @@ npx github:Razee4315/coldframe render MyVideo
 
 That's it. The cloud renders what's **pushed** to GitHub, and coldframe warns you if you have unpushed changes.
 
-## Google Drive and Colab (optional)
+## Google Drive (optional)
 
-Neither needs a password or key copied anywhere. You sign in to Google in your browser.
-
-### Google Drive: save every render to `My Drive/coldframe/`
+Save every render to `My Drive/coldframe/`. No password or key is copied anywhere: you sign in to Google in your browser.
 
 1. Install rclone, the tool that uploads to Drive: `winget install Rclone.Rclone` (Windows) or `brew install rclone` (macOS).
 2. In your project folder, run:
@@ -83,29 +81,16 @@ Neither needs a password or key copied anywhere. You sign in to Google in your b
 
 coldframe asks only for access to files it creates itself (Google's `drive.file` permission), not the rest of your Drive. The sign-in is saved as a secret in your GitHub repo.
 
-### Google Colab: a free cloud computer, sometimes with a GPU
-
-Useful for 3D (WebGL / three.js) scenes, which GitHub's machines render without a GPU. Claude Code controls Colab through Google's [Colab MCP server](https://github.com/googlecolab/colab-mcp).
-
-1. Install [uv](https://docs.astral.sh/uv/): `winget install astral-sh.uv` or `brew install uv`.
-2. Open your project in Claude Code and approve the **colab-mcp** server (setup added it in `.mcp.json`).
-3. Stay signed in to Google in your browser, then ask Claude: *"render MyVideo on Colab"*. A Colab tab opens and connects by itself.
-4. For the GPU: in that tab, **Runtime → Change runtime type → T4 GPU**.
-
-**Windows: if the Colab server fails to start** with a `pywin32` "being used by another process" error (antivirus locking files while `uvx` installs), install it once with pip instead and point `.mcp.json` at it:
-
-```powershell
-uv venv --python 3.13 --seed $HOME\.colab-mcp
-& $HOME\.colab-mcp\Scripts\python.exe -m pip install git+https://github.com/googlecolab/colab-mcp
-```
-
-Then in `.mcp.json` use `"command": "C:\\Users\\<you>\\.colab-mcp\\Scripts\\colab-mcp.exe"` with `"args": []`.
-
-Prefer to click through it yourself? [Open the notebook in Colab](https://colab.research.google.com/github/Razee4315/coldframe/blob/main/colab/coldframe.ipynb).
 
 ## Video rules
 
-Setup adds a [video-rules skill](.claude/skills/video-rules/SKILL.md) to your project, so Claude Code follows it whenever it makes a video. It covers the story structure, the "AI look" to avoid, text, UI, data, audio, captions, CTA, length and formats, and ends with a checklist to run before every render. The short version:
+Setup adds three skills to your project, so Claude Code follows them whenever it makes a video:
+
+- [video-rules](.claude/skills/video-rules/SKILL.md): story structure, the "AI look" to avoid, text, UI, data, CTA, length and formats.
+- [motion-direction](.claude/skills/motion-direction/SKILL.md): how to direct and build real motion design in Remotion: a virtual camera, depth planes, match cuts and palette impacts, and a workflow of three directions → beat sheet → approved styleframes before anything is animated.
+- [sound-design](.claude/skills/sound-design/SKILL.md): a soft music bed, a real sound for every click, keystroke and transition, mixing levels, and an audio sample you approve before the full render.
+
+The short version:
 
 | Don't | Do |
 |---|---|
@@ -115,8 +100,9 @@ Setup adds a [video-rules skill](.claude/skills/video-rules/SKILL.md) to your pr
 | Make everything bounce | One emphasis technique, on the word that matters |
 | Tiny text, lots of it | 7 words or fewer per screen, readable on a phone |
 | Numbers you haven't measured | Real, sourced numbers |
+| Flat slides fading in | A camera, depth, one real product action with a held result |
+| Silence, or beeps made in code | Soft music and a real sound for every action |
 
-The demo video was made with these rules.
 
 ## Honest numbers
 
@@ -128,7 +114,7 @@ Measured on a laptop with 4 cores / 8 threads.
 | Your computer while it renders | Busy, fans on | Free, can even be off |
 | 3D scenes (WebGL / three.js) | Uses your GPU | No GPU, drawn in software: much slower |
 
-Each machine spends about 40 s getting ready, so **short videos are still quicker at home**. coldframe is for when you need your computer while a video renders, and for long videos made of text, UI, images and footage. For 3D-heavy videos, render the 3D shots once on a GPU (your laptop or Colab) and use them as clips.
+Each machine spends about 40 s getting ready, so **short videos are still quicker at home**. coldframe is for when you need your computer while a video renders, and for long videos made of text, UI, images and footage. For 3D-heavy videos, render the 3D shots once on your own GPU and use them as clips.
 
 ## CLI
 
@@ -188,8 +174,8 @@ bin/coldframe.mjs              the CLI (no dependencies, uses gh)
 templates/coldframe.yml        what setup adds to your project
 .claude/skills/coldframe/      Claude Code skill: how to render in the cloud
 .claude/skills/video-rules/    Claude Code skill: how to make videos that don't look AI-made
-.mcp.json                      Colab MCP server config
-colab/                         Colab notebook + background helper
+.claude/skills/motion-direction/ Claude Code skill: camera, depth, transitions, styleframes-first workflow
+.claude/skills/sound-design/   Claude Code skill: music bed, a sound for every action, loudness
 example/                       the Remotion demo project
 docs/                          the website (GitHub Pages)
 ```
