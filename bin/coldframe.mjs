@@ -216,7 +216,8 @@ async function drive(opts = {}) {
     console.log("  (coldframe only asks for access to files it creates itself, not your whole Drive.)");
     const args = ["config", "create", remote, "drive", "scope=drive.file"];
     if (opts["client-id"]) args.push(`client_id=${opts["client-id"]}`, `client_secret=${opts["client-secret"] || ""}`);
-    const r = run("rclone", args, { inherit: true });
+    // rclone prints the finished config, including the sign-in token, to stdout: never show it.
+    const r = spawnSync(tool("rclone"), args, { stdio: ["inherit", "ignore", "inherit"] });
     if (r.status !== 0) die("Google sign-in didn't finish. Run `coldframe drive` again.");
   }
   if (!works()) die("Drive sign-in saved, but a test upload check failed. Run `coldframe drive` again.");
@@ -275,7 +276,8 @@ async function render(opts) {
   fs.mkdirSync(dir, { recursive: true });
   const artifacts = JSON.parse(gh(["api", `repos/${repo}/actions/runs/${found.databaseId}/artifacts`, "--paginate"])).artifacts
     .map((a) => a.name)
-    .filter((n) => !n.startsWith("coldframe-"));
+    // Skip only the workflow's own temporary artifacts, never a render the user named "coldframe-…".
+    .filter((n) => n !== "coldframe-bundle" && !n.startsWith("coldframe-part-"));
   // gh refuses to overwrite, so download next to the target and move files in.
   const tmp = path.join(dir, `.coldframe-${found.databaseId}`);
   const saved = [];
