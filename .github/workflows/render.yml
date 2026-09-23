@@ -244,11 +244,6 @@ jobs:
           file="${OUT:-$COMP-${{ github.run_number }}.mp4}"
           echo "file=$file" >> "$GITHUB_OUTPUT"
           echo "artifact=${file%.mp4}" >> "$GITHUB_OUTPUT"
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: coldframe-part-*
-          path: parts
-          merge-multiple: true
       # Remotion ships its own ffmpeg/ffprobe; installing the project (cached) is
       # much faster than apt-get install ffmpeg.
       - uses: actions/checkout@v7
@@ -261,6 +256,11 @@ jobs:
       - name: Install project
         working-directory: ${{ inputs.project-dir }}
         run: *install
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: coldframe-part-*
+          path: ${{ github.workspace }}/parts
+          merge-multiple: true
       - name: Join chunks and mux audio
         working-directory: ${{ inputs.project-dir }}
         env:
