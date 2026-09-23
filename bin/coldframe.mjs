@@ -5,6 +5,7 @@
 //   coldframe setup                     one-time setup in your Remotion project (start here)
 //   coldframe render <Comp> [options]   render in the cloud, wait, download the MP4
 //   coldframe drive                     also save every render to Google Drive
+//                                     (--client-id/--client-secret: your own Google OAuth app)
 //   coldframe runs                      list recent cloud renders
 //   coldframe init                      only add the GitHub workflow file
 //
@@ -204,20 +205,29 @@ async function drive(opts = {}) {
     ${isWin ? "winget install Rclone.Rclone" : process.platform === "darwin" ? "brew install rclone" : "see https://rclone.org/install/"}`);
     return;
   }
-  const remote = "gdrive";
-  const remotes = run("rclone", ["listremotes"]).stdout || "";
-  if (!remotes.split(/\r?\n/).includes(`${remote}:`)) {
+  // coldframe keeps its own remote so it never uses or changes remotes you already have.
+  const remote = "coldframe";
+  const works = () => run("rclone", ["lsd", `${remote}:`, "--max-depth", "1"]).status === 0;
+  const remotes = (run("rclone", ["listremotes"]).stdout || "").split(/\r?\n/);
+  const fresh = opts["client-id"] !== undefined || !remotes.includes(`${remote}:`) || !works();
+  if (fresh) {
+    if (remotes.includes(`${remote}:`)) run("rclone", ["config", "delete", remote]);
     console.log("  A Google sign-in page opens in your browser. Pick your account and click Allow.");
     console.log("  (coldframe only asks for access to files it creates itself, not your whole Drive.)");
-    const r = run("rclone", ["config", "create", remote, "drive", "scope=drive.file"], { inherit: true });
+    const args = ["config", "create", remote, "drive", "scope=drive.file"];
+    if (opts["client-id"]) args.push(`client_id=${opts["client-id"]}`, `client_secret=${opts["client-secret"] || ""}`);
+    const r = run("rclone", args, { inherit: true });
     if (r.status !== 0) die("Google sign-in didn't finish. Run `coldframe drive` again.");
   }
-  // Store only the gdrive section, never other rclone remotes you may have.
+  if (!works()) die("Drive sign-in saved, but a test upload check failed. Run `coldframe drive` again.");
+  ok("Google Drive works from this computer");
+
+  // Save only coldframe's section as a repo secret, renamed to the workflow's default remote (gdrive:).
   const file = (run("rclone", ["config", "file"]).stdout || "").trim().split(/\r?\n/).pop();
   const conf = fs.readFileSync(file, "utf8");
-  const section = conf.match(new RegExp(`\\[${remote}\\][\\s\\S]*?(?=\\n\\[|$)`))?.[0];
-  if (!section) die(`couldn't find the ${remote} remote in ${file}.`);
-  gh(["secret", "set", "RCLONE_CONF", "--repo", repo], { input: section.trim() + "\n" });
+  const section = conf.match(new RegExp(`\\[${remote}\\][\\s\\S]*?(?=\\r?\\n\\[|$)`))?.[0];
+  if (!section || !/^token\s*=/m.test(section)) die(`couldn't read a signed-in ${remote} remote from ${file}.`);
+  gh(["secret", "set", "RCLONE_CONF", "--repo", repo], { input: section.trim().replace(`[${remote}]`, "[gdrive]") + "\n" });
   ok(`Drive connected. Renders from ${repo} will also appear in My Drive/coldframe/`);
 }
 

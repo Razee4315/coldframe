@@ -287,12 +287,18 @@ jobs:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
           DEST: ${{ inputs.drive-folder }}
           FILE: ${{ steps.name.outputs.file }}
+        # A Drive problem must never cost you the render: the MP4 is already an artifact.
         run: |
           if [ -z "$RCLONE_CONF" ]; then echo "No RCLONE_CONF secret, skipping Drive."; echo "dest=" >> "$GITHUB_OUTPUT"; exit 0; fi
-          curl -fsSL https://rclone.org/install.sh | sudo bash > /dev/null
+          curl -fsSL -o rclone.zip https://downloads.rclone.org/rclone-current-linux-amd64.zip
+          unzip -q -j rclone.zip '*/rclone' -d "$RUNNER_TEMP/rclone" && export PATH="$RUNNER_TEMP/rclone:$PATH"
           mkdir -p ~/.config/rclone && printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
-          rclone copyto "final/$FILE" "$DEST/$FILE" --stats-one-line -v
-          echo "dest=$DEST/$FILE" >> "$GITHUB_OUTPUT"
+          if rclone copyto "final/$FILE" "$DEST/$FILE" --stats-one-line -v; then
+            echo "dest=$DEST/$FILE" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Google Drive upload failed. The MP4 is still attached to this run. Run 'coldframe drive' again to reconnect Drive."
+            echo "dest=failed (see warning)" >> "$GITHUB_OUTPUT"
+          fi
       - name: Summary
         env:
           FILE: ${{ steps.name.outputs.file }}
