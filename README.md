@@ -91,6 +91,15 @@ Useful for 3D (WebGL / three.js) scenes, which GitHub's machines render without 
 3. Stay signed in to Google in your browser, then ask Claude: *"render MyVideo on Colab"*. A Colab tab opens and connects by itself.
 4. For the GPU: in that tab, **Runtime → Change runtime type → T4 GPU**.
 
+**Windows: if the Colab server fails to start** with a `pywin32` "being used by another process" error (antivirus locking files while `uvx` installs), install it once with pip instead and point `.mcp.json` at it:
+
+```powershell
+uv venv --python 3.13 --seed $HOME\.colab-mcp
+& $HOME\.colab-mcp\Scripts\python.exe -m pip install git+https://github.com/googlecolab/colab-mcp
+```
+
+Then in `.mcp.json` use `"command": "C:\\Users\\<you>\\.colab-mcp\\Scripts\\colab-mcp.exe"` with `"args": []`.
+
 Prefer to click through it yourself? [Open the notebook in Colab](https://colab.research.google.com/github/Razee4315/coldframe/blob/main/colab/coldframe.ipynb).
 
 ## Video rules
