@@ -99,11 +99,12 @@ jobs:
           cache-dependency-path: ${{ inputs.project-dir }}/package-lock.json
       - name: Install Chrome dependencies
         run: &linuxdeps |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends \
-            libnss3 libdbus-1-3 libatk1.0-0t64 libatk-bridge2.0-0t64 libgbm1 libasound2t64 \
-            libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 libcups2t64 \
-            libpango-1.0-0 libcairo2 fonts-noto-color-emoji > /dev/null
+          libs="libnss3 libdbus-1-3 libatk1.0-0t64 libatk-bridge2.0-0t64 libgbm1 libasound2t64
+            libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 libcups2t64
+            libpango-1.0-0 libcairo2 fonts-noto-color-emoji"
+          # GitHub's image ships Chrome, so these are usually installed already.
+          if dpkg -s $libs > /dev/null 2>&1; then echo "Chrome libraries already installed"; exit 0; fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends $libs > /dev/null
       - name: Install project
         working-directory: ${{ inputs.project-dir }}
         run: &install |
@@ -248,25 +249,40 @@ jobs:
           pattern: coldframe-part-*
           path: parts
           merge-multiple: true
-      - name: Install ffmpeg
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg > /dev/null
+      # Remotion ships its own ffmpeg/ffprobe; installing the project (cached) is
+      # much faster than apt-get install ffmpeg.
+      - uses: actions/checkout@v7
+        with: { lfs: false, sparse-checkout: "${{ inputs.project-dir }}" }
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.project-dir }}/package-lock.json
+      - name: Install project
+        working-directory: ${{ inputs.project-dir }}
+        run: *install
       - name: Join chunks and mux audio
+        working-directory: ${{ inputs.project-dir }}
         env:
           FILE: ${{ steps.name.outputs.file }}
           TOTAL: ${{ needs.plan.outputs.total }}
         run: |
           set -euo pipefail
-          ls -la parts
-          for f in parts/chunk-*.mp4; do echo "file '$PWD/$f'"; done | sort > list.txt
-          ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i list.txt -c copy video.mp4
-          mkdir -p final
-          if [ -s parts/audio.wav ]; then
-            ffmpeg -hide_banner -loglevel error -i video.mp4 -i parts/audio.wav \
-              -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest -movflags +faststart "final/$FILE"
+          ffmpeg() { npx remotion ffmpeg "$@"; }
+          ffprobe() { npx remotion ffprobe "$@"; }
+          P="$GITHUB_WORKSPACE/parts"; F="$GITHUB_WORKSPACE/final"
+          ls -la "$P"
+          for f in "$P"/chunk-*.mp4; do echo "file '$f'"; done | sort > list.txt
+          ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i list.txt -c copy video.mp4
+          mkdir -p "$F"
+          if [ -s "$P/audio.wav" ]; then
+            ffmpeg -hide_banner -loglevel error -y -i video.mp4 -i "$P/audio.wav" \
+              -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest -movflags +faststart "$F/$FILE"
           else
-            ffmpeg -hide_banner -loglevel error -i video.mp4 -c copy -movflags +faststart "final/$FILE"
+            ffmpeg -hide_banner -loglevel error -y -i video.mp4 -c copy -movflags +faststart "$F/$FILE"
           fi
-          frames=$(ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of default=nw=1:nk=1 "final/$FILE" | tr -dc 0-9)
+          rm -f video.mp4 list.txt
+          frames=$(ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of default=nw=1:nk=1 "$F/$FILE" | tr -dc 0-9)
           echo "Frames in output: $frames (expected $TOTAL)"
           if [ "$frames" != "$TOTAL" ]; then echo "::error::Frame count mismatch: $frames != $TOTAL"; exit 1; fi
       - uses: actions/upload-artifact@v7
