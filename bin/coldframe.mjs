@@ -88,9 +88,19 @@ async function render(opts) {
   const artifacts = JSON.parse(gh(["api", `repos/${repo}/actions/runs/${run.databaseId}/artifacts`, "--paginate"])).artifacts
     .map((a) => a.name)
     .filter((n) => !n.startsWith("coldframe-"));
-  for (const name of artifacts) gh(["run", "download", String(run.databaseId), "--repo", repo, "-n", name, "-D", dir]);
+  // gh refuses to overwrite, so download next to the target and move files in.
+  const tmp = path.join(dir, `.coldframe-${run.databaseId}`);
+  const saved = [];
+  for (const name of artifacts) {
+    gh(["run", "download", String(run.databaseId), "--repo", repo, "-n", name, "-D", tmp]);
+    for (const f of fs.readdirSync(tmp)) {
+      fs.renameSync(path.join(tmp, f), path.join(dir, f));
+      saved.push(path.join(dir, f));
+    }
+  }
+  fs.rmSync(tmp, { recursive: true, force: true });
   const mins = ((Date.now() - t0) / 60000).toFixed(1);
-  console.log(`Done in ${mins} min. Saved to ${dir}`);
+  console.log(`Done in ${mins} min. Saved ${saved.map((f) => path.relative(".", f)).join(", ")}`);
 }
 
 function init() {
