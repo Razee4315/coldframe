@@ -1,91 +1,133 @@
 <p align="center">
-  <img src="docs/media/icon.svg" width="72" alt="coldframe logo">
+  <img src="docs/media/icon.svg" width="76" alt="coldframe logo: a play button cut into three slices">
 </p>
 
 <h1 align="center">coldframe</h1>
 
 <p align="center">
   <b>Render Remotion videos in the cloud. Your laptop stays cold.</b><br>
-  Parallel renders on free GitHub Actions runners · Google Colab via MCP · delivery to Google Drive
+  Free GitHub machines render your video in parallel, every frame is checked, and the MP4 comes back to you.
 </p>
 
 <p align="center">
   <a href="https://razee4315.github.io/coldframe/">Website</a> ·
-  <a href="#quickstart">Quickstart</a> ·
-  <a href="https://colab.research.google.com/github/Razee4315/coldframe/blob/main/colab/coldframe.ipynb">Open in Colab</a> ·
+  <a href="#setup">Setup</a> ·
+  <a href="#google-drive-and-colab-optional">Drive &amp; Colab</a> ·
+  <a href="#video-rules">Video rules</a> ·
   <a href="#faq">FAQ</a>
 </p>
 
 <p align="center">
-  <a href="https://razee4315.github.io/coldframe/"><img src="docs/media/site.png" alt="The coldframe website: Render in the cloud. Your laptop stays cold." width="900"></a>
+  <a href="https://razee4315.github.io/coldframe/"><img src="docs/media/site.png" alt="The coldframe website" width="900"></a>
 </p>
 
 ---
 
-Rendering a long [Remotion](https://www.remotion.dev) video ties up your computer for minutes: fans at full speed, everything else slow. coldframe moves that work to free cloud machines:
+## What it does
 
-- **Split:** the timeline is cut into frame ranges and rendered on up to **20 GitHub Actions runners at the same time**.
-- **Stitch:** the video pieces are joined without re-encoding, each carries its slice of the audio as lossless PCM so the soundtrack joins **sample-exactly**, and **every frame is counted** before the run passes.
-- **Deliver:** the MP4 is attached to the run, copied to **Google Drive** (optional), and downloaded to your PC by the CLI.
-- **Colab:** a notebook and helper for Google Colab that **Claude Code can drive** through Google's [Colab MCP server](https://github.com/googlecolab/colab-mcp).
+Rendering a [Remotion](https://www.remotion.dev) video ties up your computer: fans on, everything slow, nothing else gets done. coldframe hands the render to free GitHub machines instead:
 
-The [demo video on the website](https://razee4315.github.io/coldframe/) ([MP4](docs/media/demo.mp4)) was made with Remotion ([`example/`](example)) and rendered by coldframe on 8 runners.
+1. **Split:** your video is cut into equal pieces.
+2. **Render:** up to 20 GitHub machines each render one piece, all at the same time.
+3. **Stitch:** the pieces are joined without re-encoding, every frame is counted, and the MP4 comes back to your computer (and to Google Drive, if you want).
 
-## How it works
-
-```mermaid
-flowchart LR
-  A[Plan<br/>bundle + split frames] --> B1[Chunk 00]
-  A --> B2[Chunk 01]
-  A --> B3[...]
-  A --> B8[Chunk 07]
-  B1 & B2 & B3 & B8 --> D[Stitch<br/>join, encode audio, count frames]
-  D --> E[Artifact]
-  D --> F[Google Drive]
-```
+The [demo on the website](https://razee4315.github.io/coldframe/) ([MP4](docs/media/demo.mp4)) is a Remotion project in [`example/`](example), rendered by coldframe on 8 machines.
 
 <p align="center">
-  <img src="docs/media/actions-run.png" alt="A real coldframe run on GitHub Actions: Plan, 8 chunks in parallel, then Stitch + deliver" width="560">
-  <img src="docs/media/cli.png" alt="Terminal output of coldframe render: start, wait for all jobs, save the MP4" width="560">
+  <img src="docs/media/actions-run.png" alt="A real coldframe run: Plan, 8 chunks in parallel, then Stitch + deliver" width="520">
+  <img src="docs/media/cli.png" alt="Terminal output of coldframe render: start, wait for all jobs, save the MP4" width="600">
 </p>
-<p align="center"><sub>A real run of the demo: every chunk renders on its own machine at the same time, and one command starts it, waits and downloads the result.</sub></p>
 
-## Quickstart
+## Setup
 
-You need a Remotion project in a GitHub repo, Node 18+ and the [GitHub CLI](https://cli.github.com) signed in (`gh auth login`).
+You need a Remotion project on your computer and [Node.js](https://nodejs.org) 18 or newer.
 
-**1. Add the workflow** (run in your Remotion project root, then commit and push):
+**1. Install the GitHub CLI**, then open a new terminal:
 
-```bash
-npx github:Razee4315/coldframe init
-git add .github && git commit -m "Add coldframe" && git push
-```
+| Windows | macOS | Linux |
+|---|---|---|
+| `winget install GitHub.cli` | `brew install gh` | [cli.github.com](https://cli.github.com) |
 
-This adds [`.github/workflows/coldframe.yml`](templates/coldframe.yml), a short file that calls coldframe's shared [render workflow](.github/workflows/render.yml).
-
-**2. Render in the cloud:**
+**2. Run setup in your project folder.** It walks you through everything and asks before it creates anything:
 
 ```bash
-npx github:Razee4315/coldframe render MyComp --chunks 8
+npx github:Razee4315/coldframe setup
 ```
 
-It starts the run, waits for it, and saves the MP4 to `out/cloud/`. You can also start a render from your repo's **Actions** tab → **coldframe** → **Run workflow**.
+- signs you in to GitHub (you paste a code in your browser)
+- puts your project on GitHub if it isn't there yet
+- adds the render workflow, the Claude Code skills and the Colab connection
+- optionally connects Google Drive
 
-**3. Optional: deliver to Google Drive.** Sign in to Google once with [rclone](https://rclone.org/drive/) (name the remote `gdrive`), then store the config as a repo secret:
+**3. Render.** Use the `id` of your Remotion `<Composition>`. The MP4 lands in `out/cloud/`.
 
 ```bash
-rclone config
-gh secret set RCLONE_CONF < "$(rclone config file | tail -1)"
+npx github:Razee4315/coldframe render MyVideo
 ```
 
-Every render is then also copied to `My Drive/coldframe/`.
+That's it. The cloud renders what's **pushed** to GitHub, and coldframe warns you if you have unpushed changes.
+
+## Google Drive and Colab (optional)
+
+Neither needs a password or key copied anywhere. You sign in to Google in your browser.
+
+### Google Drive: save every render to `My Drive/coldframe/`
+
+1. Install rclone, the tool that uploads to Drive: `winget install Rclone.Rclone` (Windows) or `brew install rclone` (macOS).
+2. In your project folder, run:
+   ```bash
+   npx github:Razee4315/coldframe drive
+   ```
+3. A Google page opens. Pick your account and click **Allow**.
+
+coldframe asks only for access to files it creates itself (Google's `drive.file` permission), not the rest of your Drive. The sign-in is saved as a secret in your GitHub repo.
+
+### Google Colab: a free cloud computer, sometimes with a GPU
+
+Useful for 3D (WebGL / three.js) scenes, which GitHub's machines render without a GPU. Claude Code controls Colab through Google's [Colab MCP server](https://github.com/googlecolab/colab-mcp).
+
+1. Install [uv](https://docs.astral.sh/uv/): `winget install astral-sh.uv` or `brew install uv`.
+2. Open your project in Claude Code and approve the **colab-mcp** server (setup added it in `.mcp.json`).
+3. Stay signed in to Google in your browser, then ask Claude: *"render MyVideo on Colab"*. A Colab tab opens and connects by itself.
+4. For the GPU: in that tab, **Runtime → Change runtime type → T4 GPU**.
+
+Prefer to click through it yourself? [Open the notebook in Colab](https://colab.research.google.com/github/Razee4315/coldframe/blob/main/colab/coldframe.ipynb).
+
+## Video rules
+
+Setup adds a [video-rules skill](.claude/skills/video-rules/SKILL.md) to your project, so Claude Code follows it whenever it makes a video. It covers the story structure, the "AI look" to avoid, text, UI, data, audio, captions, CTA, length and formats, and ends with a checklist to run before every render. The short version:
+
+| Don't | Do |
+|---|---|
+| Open with a logo | Spend the first 3 seconds on the problem or the result |
+| Default dark + glow + purple, particles | Your real brand colours and fonts |
+| The same fade between every scene | Mix transitions, each with a reason |
+| Make everything bounce | One emphasis technique, on the word that matters |
+| Tiny text, lots of it | 7 words or fewer per screen, readable on a phone |
+| Numbers you haven't measured | Real, sourced numbers |
+
+The demo video was made with these rules.
+
+## Honest numbers
+
+Measured on a laptop with 4 cores / 8 threads.
+
+| | Laptop | coldframe on GitHub |
+|---|---|---|
+| The 20 s demo (600 frames, 1080p30) | 46 s | 1 min 53 s on 8 machines ([run](https://github.com/Razee4315/coldframe/actions/runs/35863387579)) |
+| Your computer while it renders | Busy, fans on | Free, can even be off |
+| 3D scenes (WebGL / three.js) | Uses your GPU | No GPU, drawn in software: much slower |
+
+Each machine spends about 40 s getting ready, so **short videos are still quicker at home**. coldframe is for when you need your computer while a video renders, and for long videos made of text, UI, images and footage. For 3D-heavy videos, render the 3D shots once on a GPU (your laptop or Colab) and use them as clips.
 
 ## CLI
 
 ```text
-coldframe init                      add the render workflow to this Remotion repo
-coldframe render <Comp> [options]   render in the cloud, wait, download
+coldframe setup                     one-time setup in your Remotion project (start here)
+coldframe render <Comp> [options]   render in the cloud, wait, download the MP4
+coldframe drive                     also save every render to Google Drive
 coldframe runs                      list recent cloud renders
+coldframe init                      only add the GitHub workflow file
 
   --chunks <n>      parallel machines (default 8, max 20)
   --props <json>    input props
@@ -93,111 +135,51 @@ coldframe runs                      list recent cloud renders
   --out <dir>       where to save the MP4 (default out/cloud)
   --name <file>     output file name
   --no-wait         start the render and exit
-  --repo <o/r>      GitHub repo (default: the repo in this folder)
 ```
 
-The cloud renders what is **pushed**. The CLI warns you about unpushed commits and uncommitted changes.
+You can also start a render from your repo's **Actions** tab → **coldframe** → **Run workflow**.
 
 ## Workflow inputs
 
-Use the reusable workflow directly if you want full control:
-
-```yaml
-jobs:
-  render:
-    uses: Razee4315/coldframe/.github/workflows/render.yml@v1
-    with:
-      composition: MyComp
-      chunks: 12
-    secrets: inherit
-```
+`setup` adds [`.github/workflows/coldframe.yml`](templates/coldframe.yml), which calls the shared [render workflow](.github/workflows/render.yml). Edit it to change these:
 
 | Input | Default | What it does |
 |---|---|---|
 | `composition` | (required) | Composition id to render |
 | `chunks` | `8` | Parallel machines, 1–20 |
 | `project-dir` | `.` | Folder with the Remotion `package.json` |
-| `entry-point` | auto | Remotion entry file |
 | `props` | `{}` | Input props as JSON |
 | `output-name` | `<comp>-<run>.mp4` | Name of the final file |
-| `gl` | `swangle` | Chrome OpenGL backend. `swangle` runs WebGL / three.js on CPU-only runners |
+| `gl` | `swangle` | Chrome's OpenGL backend. `swangle` runs WebGL on machines without a GPU |
+| `frame-timeout` | `120000` | Milliseconds one frame may take (heavy 3D needs more than Remotion's default) |
 | `concurrency` | `100%` | Remotion `--concurrency` on each machine |
 | `extra-args` | | Extra flags for every `remotion render`, e.g. `--crf=16` |
-| `min-frames-per-chunk` | `60` | Never split finer than this |
-| `drive-folder` | `gdrive:coldframe` | rclone destination, used when `RCLONE_CONF` is set |
-| `frame-timeout` | `120000` | Milliseconds a single frame may take; heavy WebGL on CPU needs more than Remotion's default |
-| `node-version` | `22` | Node.js version |
+| `drive-folder` | `gdrive:coldframe` | Where renders go in Drive, when Drive is connected |
 
-Your project needs a committed `package-lock.json`. coldframe also adds Linux binaries that npm often leaves out of lockfiles made on Windows or macOS ([npm/cli#4828](https://github.com/npm/cli/issues/4828)).
-
-## Google Colab
-
-[`colab/coldframe.ipynb`](colab/coldframe.ipynb) renders on a Colab runtime and saves to Google Drive. [`colab/coldframe_colab.py`](colab/coldframe_colab.py) runs every step in the background and returns within seconds, so it also works inside the Colab MCP server's 30-second tool timeout:
-
-```python
-!curl -fsSL https://raw.githubusercontent.com/Razee4315/coldframe/main/colab/coldframe_colab.py -o coldframe_colab.py
-import coldframe_colab as cf
-cf.gpu()                          # what machine did we get?
-cf.setup("you/your-video")        # clone + install in the background (2-4 min)
-cf.status()                       # poll until "ready"
-cf.render("MyComp")               # render in the background
-cf.status()                       # poll until "done"
-cf.to_drive("coldframe")          # My Drive/coldframe/MyComp-....mp4
-```
-
-For a private repo, add a Colab secret named `GITHUB_TOKEN` (key icon in the sidebar) and allow the notebook to read it.
-
-## Claude Code
-
-This repo includes a [Claude Code skill](.claude/skills/coldframe/SKILL.md) and an [MCP config](.mcp.json) for Google's Colab server. To use them in your own Remotion repo:
-
-```bash
-mkdir -p .claude/skills/coldframe
-curl -fsSL https://raw.githubusercontent.com/Razee4315/coldframe/main/.claude/skills/coldframe/SKILL.md -o .claude/skills/coldframe/SKILL.md
-claude mcp add colab-mcp -- uvx git+https://github.com/googlecolab/colab-mcp
-```
-
-Then ask Claude to render your video in the cloud. It checks a few low-res frames locally, pushes, renders on Actions (or Colab), and checks the result before handing it over.
-
-## Benchmarks
-
-Measured, not estimated. Laptop: Intel i7-7820HQ, 4 cores / 8 threads.
-
-| Video | Laptop | coldframe |
-|---|---|---|
-| 16 s demo, 480 frames, 1080p30 | **57 s** | 1 min 42 s on 8 machines ([run](https://github.com/Razee4315/coldframe/actions/runs/35857774301)) |
-| 88 s launch film, 5,290 frames, 1080p60, three.js 360° scenes | 12–20 min | 23 min 52 s on 20 machines (private repo, 2 vCPU each) |
-
-Each machine spends about 40 s getting ready (checkout, cached `npm ci`, downloading the bundle), so **short clips are faster at home**. And GitHub runners have **no GPU**: WebGL / three.js draws in software, so the 360°-heavy film was slower in the cloud than on the laptop's GPU. Its chunks with panoramas took up to 22 min, and those without took 9. Public repos get 4-vCPU runners, twice what private repos get.
-
-coldframe wins when you need your computer for something else while a video renders, and for long videos made mostly of HTML, images and footage. For 3D-heavy videos, render the 3D shots once on a GPU and drop them in as clips.
-
-The cloud render of the film matched the laptop render: 5,290 / 5,290 frames, median PSNR 54.9 dB. 14 frames differed visibly, all at transitions where the film's own components keep state between frames, which Remotion asks you to avoid.
+Your project needs a committed `package-lock.json`. coldframe adds the Linux binaries that npm often leaves out of lockfiles made on Windows or macOS ([npm/cli#4828](https://github.com/npm/cli/issues/4828)).
 
 ## FAQ
 
-**Is it free?** On public repos, GitHub Actions minutes on standard runners are free. Private repos get 2,000 free minutes a month, and every machine counts: 8 chunks × 3 min = 24 min.
+**Is it free?** Yes. On public repos, GitHub machines are free with no limit. Private repos get 2,000 free machine-minutes a month, and each machine counts separately (8 machines × 3 min = 24 min). If you run out, GitHub stops the job. You're never charged unless you add a payment method.
 
-**Will the joins show?** No. Remotion renders each frame on its own, video chunks are joined without re-encoding, and each chunk carries its audio slice as 16-bit PCM. Joined, those slices are bit-identical to a single-pass audio render (tested: 768,000 of 768,000 samples match). A wrong frame count fails the run.
+**Will the joins show?** No. Each frame is rendered on its own, the video pieces are joined without re-encoding, and each piece carries its audio as lossless PCM, so the soundtrack joins sample-exactly (tested: 768,000 of 768,000 samples identical to a single-pass render). If the final frame count is wrong, the run fails instead of giving you a broken file.
 
-**Does WebGL / three.js work?** Yes, through SwiftShader (`--gl=swangle`), and it matches a GPU render. It's slow, though, so see the benchmarks above.
+**Does WebGL / three.js work?** Yes, and it looks the same as a GPU render, but it's slow on GitHub's machines. See the honest numbers above.
 
-**Why not Remotion Lambda?** Lambda is faster and made for production, but needs AWS and costs money per render. coldframe is for free renders from a plain GitHub repo.
+**Why not Remotion Lambda?** Lambda is faster and built for production, but needs AWS and costs money per render. coldframe is for free renders from a plain GitHub repo.
 
-**Are my files private?** Your project stays in your own repo, so use a private repo for confidential footage. Chunk artifacts are deleted after a day. The final MP4 stays on the run (90 days by default) and in your Drive.
-
-**Remotion's license?** coldframe is MIT. Remotion itself is free for individuals and companies of up to 3 people; larger companies need a [company license](https://www.remotion.pro/license).
+**What about Remotion's license?** coldframe is MIT. Remotion itself is free for individuals and companies of up to 3 people; larger companies need a [company license](https://www.remotion.pro/license).
 
 ## Repository layout
 
 ```text
-.github/workflows/render.yml   the reusable distributed render workflow
-.github/workflows/coldframe.yml  renders example/ (same inputs as the template)
-templates/coldframe.yml        what `coldframe init` adds to your repo
 bin/coldframe.mjs              the CLI (no dependencies, uses gh)
-colab/                         Colab notebook + background helper
-.claude/skills/coldframe/      Claude Code skill
+.github/workflows/render.yml   the shared parallel render workflow
+templates/coldframe.yml        what setup adds to your project
+.claude/skills/coldframe/      Claude Code skill: how to render in the cloud
+.claude/skills/video-rules/    Claude Code skill: how to make videos that don't look AI-made
 .mcp.json                      Colab MCP server config
+colab/                         Colab notebook + background helper
 example/                       the Remotion demo project
 docs/                          the website (GitHub Pages)
 ```

@@ -4,299 +4,234 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>coldframe</title>
-<meta name="description" content="Render Remotion videos on free cloud machines. coldframe splits every render across parallel GitHub Actions runners, stitches it losslessly and delivers the MP4 to Google Drive. Your laptop stays cold.">
+<meta name="description" content="Render Remotion videos on free GitHub machines instead of your laptop. One setup command, parallel renders, every frame checked, optional delivery to Google Drive.">
 <meta property="og:title" content="coldframe: render Remotion videos in the cloud">
-<meta property="og:description" content="Parallel renders on free GitHub Actions runners, Google Colab via MCP, delivery to Google Drive. Your laptop stays cold.">
+<meta property="og:description" content="One setup command. Your video renders on free GitHub machines in parallel, every frame is checked, and the MP4 comes back to you. Your laptop stays cold.">
 <meta property="og:image" content="https://razee4315.github.io/coldframe/media/og.png">
 <meta property="og:url" content="https://razee4315.github.io/coldframe/">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="media/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #07090C;
-    --bg-2: #0A0E13;
-    --panel: #0E1319;
-    --panel-2: #121922;
-    --line: rgba(180, 220, 255, 0.10);
-    --line-2: rgba(180, 220, 255, 0.18);
-    --text: #EEF4F8;
-    --dim: #8A99A5;
-    --faint: #5B6873;
-    --ice: #8FD3FF;
-    --ice-deep: #3A8DC4;
-    --ok: #7FE3B0;
-    --glow: rgba(143, 211, 255, 0.08);
-    --code-bg: #0B1016;
-    --shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8);
-    --sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    --bg: #F3F6F7; --panel: #FFFFFF; --panel-2: #F7FAFB;
+    --line: rgba(13, 27, 36, 0.10); --line-2: rgba(13, 27, 36, 0.17);
+    --text: #0D1B24; --dim: #52636F; --faint: #7F8E99;
+    --accent: #1D5FD0; --accent-2: #1FA0DC; --ice: #7FD6EE; --ok: #1E9D63; --ember: #D9502A;
+    --code-bg: #0D1B24; --code-text: #E6EEF2; --code-dim: #7E97A8;
+    --shadow: 0 24px 60px -32px rgba(13, 40, 60, 0.35);
+    --display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    --sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-    color-scheme: dark;
-  }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      --bg: #F5F8FA; --bg-2: #EEF3F6; --panel: #FFFFFF; --panel-2: #F2F6F9;
-      --line: rgba(20, 60, 90, 0.10); --line-2: rgba(20, 60, 90, 0.18);
-      --text: #0B1620; --dim: #51626F; --faint: #7D8C97;
-      --ice: #1F7FBF; --ice-deep: #135C8E; --ok: #1E9D63;
-      --glow: rgba(31, 127, 191, 0.07); --code-bg: #0B1016;
-      --shadow: 0 30px 70px -35px rgba(10, 40, 70, 0.35);
-      color-scheme: light;
-    }
-  }
-  :root[data-theme="light"] {
-    --bg: #F5F8FA; --bg-2: #EEF3F6; --panel: #FFFFFF; --panel-2: #F2F6F9;
-    --line: rgba(20, 60, 90, 0.10); --line-2: rgba(20, 60, 90, 0.18);
-    --text: #0B1620; --dim: #51626F; --faint: #7D8C97;
-    --ice: #1F7FBF; --ice-deep: #135C8E; --ok: #1E9D63;
-    --glow: rgba(31, 127, 191, 0.07); --code-bg: #0B1016;
-    --shadow: 0 30px 70px -35px rgba(10, 40, 70, 0.35);
     color-scheme: light;
   }
-  :root[data-theme="dark"] { color-scheme: dark; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0B141B; --panel: #111E28; --panel-2: #152431;
+      --line: rgba(200, 225, 240, 0.10); --line-2: rgba(200, 225, 240, 0.18);
+      --text: #EEF3F5; --dim: #93A3AE; --faint: #66767F;
+      --accent: #6B9BF2; --accent-2: #3AB4E8; --ice: #8ADCF2; --ok: #4CC38A; --ember: #F07A55;
+      --code-bg: #07101A; --shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.7);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B141B; --panel: #111E28; --panel-2: #152431;
+    --line: rgba(200, 225, 240, 0.10); --line-2: rgba(200, 225, 240, 0.18);
+    --text: #EEF3F5; --dim: #93A3AE; --faint: #66767F;
+    --accent: #6B9BF2; --accent-2: #3AB4E8; --ice: #8ADCF2; --ok: #4CC38A; --ember: #F07A55;
+    --code-bg: #07101A; --shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.7);
+    color-scheme: dark;
+  }
 
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
-  body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 400 17px/1.6 var(--sans); -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-  }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 17px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
   a { color: inherit; }
   img, video { max-width: 100%; height: auto; display: block; }
-  .steps > *, .step > *, .cards > *, .pipeline > *, .shots2 > * { min-width: 0; }
-  code, pre, .mono { font-family: var(--mono); }
-  .wrap { width: min(1160px, 100% - 32px); margin-inline: auto; }
-
-  /* grid backdrop */
-  .grid-bg {
-    position: absolute; inset: 0 0 auto 0; height: 980px; pointer-events: none; z-index: 0;
-    background:
-      radial-gradient(900px 520px at 50% 18%, var(--glow), transparent 70%),
-      linear-gradient(var(--line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--line) 1px, transparent 1px);
-    background-size: 100% 100%, 64px 64px, 64px 64px;
-    mask-image: linear-gradient(to bottom, #000 40%, transparent);
-    -webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent);
-  }
+  code, pre { font-family: var(--mono); }
+  .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
+  .grid-2 > *, .steps > *, .step > *, .pipeline > *, .shots > *, .rules > * { min-width: 0; }
 
   /* nav */
-  header.nav {
-    position: sticky; top: 0; z-index: 20;
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    background: color-mix(in srgb, var(--bg) 78%, transparent);
-    border-bottom: 1px solid var(--line);
-  }
-  .nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; letter-spacing: -0.03em; text-decoration: none; }
-  .brand svg { width: 26px; height: 26px; }
-  .nav nav { display: flex; gap: 24px; margin-left: auto; font-size: 15px; color: var(--dim); }
+  header.nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+  .nav .wrap { display: flex; align-items: center; gap: 26px; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 9px; font: 700 22px var(--display); letter-spacing: -0.045em; text-decoration: none; }
+  .brand svg { width: 28px; height: 28px; }
+  .nav nav { display: flex; gap: 22px; margin-left: auto; font-size: 15px; color: var(--dim); }
   .nav nav a { text-decoration: none; }
   .nav nav a:hover { color: var(--text); }
-  .icon-btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line-2);
-    background: var(--panel); color: var(--text); font: 500 14px var(--sans); text-decoration: none; cursor: pointer;
-  }
-  .icon-btn:hover { border-color: var(--ice); }
+  .icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--panel); color: var(--text); font: 500 14px var(--sans); text-decoration: none; cursor: pointer; }
+  .icon-btn:hover { border-color: var(--accent); }
   .icon-btn svg { width: 16px; height: 16px; }
   #theme { width: 36px; padding: 0; }
 
   /* hero */
-  .hero { position: relative; padding: 96px 0 40px; text-align: center; z-index: 1; }
-  .eyebrow {
-    display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 999px;
-    border: 1px solid var(--line-2); background: var(--panel);
-    font: 500 13px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim);
-  }
-  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); }
-  h1 {
-    margin: 26px auto 0; max-width: 980px;
-    font-size: clamp(44px, 8vw, 96px); line-height: 0.98; letter-spacing: -0.045em; font-weight: 700;
-  }
+  .hero { padding: 88px 0 24px; text-align: center; }
+  .eyebrow { font: 500 13px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+  h1 { margin: 20px auto 0; max-width: 940px; font-size: clamp(44px, 7.6vw, 92px); line-height: 0.98; letter-spacing: -0.04em; }
   h1 .sub { color: var(--dim); }
-  h1 .cold { color: var(--ice); text-shadow: 0 0 40px color-mix(in srgb, var(--ice) 45%, transparent); }
-  .lede { max-width: 700px; margin: 26px auto 0; font-size: clamp(17px, 2vw, 20px); color: var(--dim); }
-  .ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 34px; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 0 24px; border-radius: 12px;
-    font: 500 16px var(--sans); text-decoration: none; border: 1px solid var(--line-2); background: var(--panel); color: var(--text);
-    transition: border-color .2s, transform .2s;
-  }
-  .btn:hover { border-color: var(--ice); transform: translateY(-1px); }
+  h1 .cold { color: var(--accent); }
+  .lede { max-width: 640px; margin: 24px auto 0; font-size: clamp(17px, 2vw, 20px); color: var(--dim); }
+  .ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 32px; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 0 22px; border-radius: 12px; font: 600 16px var(--sans); text-decoration: none; border: 1px solid var(--line-2); background: var(--panel); color: var(--text); transition: border-color .2s; }
+  .btn:hover { border-color: var(--accent); }
   .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
   .btn svg { width: 18px; height: 18px; }
-  .install {
-    display: inline-flex; align-items: center; gap: 14px; margin-top: 22px; padding: 10px 10px 10px 18px;
-    border-radius: 12px; border: 1px solid var(--line); background: var(--code-bg); color: #DDE8F0;
-    font: 400 14px var(--mono); max-width: 100%;
-  }
-  .install .p { color: #5C7282; }
-  .install code { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cmd { display: inline-flex; align-items: center; gap: 14px; max-width: 100%; margin-top: 20px; padding: 10px 10px 10px 18px; border-radius: 12px; background: var(--code-bg); color: var(--code-text); font: 400 14.5px var(--mono); }
+  .cmd .p { color: var(--code-dim); }
+  .cmd code { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* demo video */
-  .demo { position: relative; z-index: 1; margin-top: 64px; }
-  .window {
-    border-radius: 18px; overflow: hidden; border: 1px solid var(--line-2); background: #07090C;
-    box-shadow: var(--shadow), 0 0 0 1px rgba(0,0,0,.2);
-  }
-  .window-bar { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; background: #0C1117; border-bottom: 1px solid rgba(180,220,255,.08); }
-  .window-bar i { width: 11px; height: 11px; border-radius: 50%; background: #2A333C; }
-  .window-bar span { margin-left: 10px; font: 400 12.5px var(--mono); color: #6F808D; }
+  /* demo */
+  .demo { margin-top: 56px; }
+  .window { border-radius: 16px; overflow: hidden; border: 1px solid var(--line-2); background: var(--panel); box-shadow: var(--shadow); }
+  .window-bar { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--panel-2); }
+  .window-bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--line-2); }
+  .window-bar .fname { margin-left: 10px; font: 400 12.5px var(--mono); color: var(--faint); }
   .window-bar button { margin-left: auto; }
-  .window video { width: 100%; aspect-ratio: 16 / 9; background: #07090C; }
-  .caption { margin-top: 16px; text-align: center; font: 400 14px var(--mono); color: var(--dim); }
+  .window video { width: 100%; aspect-ratio: 16 / 9; background: #F3F6F7; }
+  .caption { margin-top: 14px; text-align: center; font: 400 14px var(--mono); color: var(--dim); }
   .caption b { color: var(--text); font-weight: 500; }
-  .mute {
-    display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 8px;
-    border: 1px solid rgba(180,220,255,.16); background: transparent; color: #AFC0CC; font: 400 12px var(--mono); cursor: pointer;
-  }
+  .mute { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--panel); color: var(--dim); font: 400 12px var(--mono); cursor: pointer; }
   .mute svg { width: 14px; height: 14px; }
 
   /* stats */
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 72px; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--panel); }
-  .stat { padding: 28px 26px; border-right: 1px solid var(--line); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 64px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--panel); }
+  .stat { padding: 26px 24px; border-right: 1px solid var(--line); }
   .stat:last-child { border-right: 0; }
-  .stat .v { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
-  .stat .v small { font-size: 18px; color: var(--dim); font-weight: 500; margin-left: 4px; }
-  .stat .k { margin-top: 6px; font: 400 13px var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
+  .stat .v { font: 700 38px/1.1 var(--display); letter-spacing: -0.03em; }
+  .stat .v small { font: 500 17px var(--sans); color: var(--dim); margin-left: 4px; letter-spacing: 0; }
+  .stat .k { margin-top: 6px; font: 400 13px var(--mono); color: var(--dim); }
 
   /* sections */
-  section.block { padding: 120px 0 0; scroll-margin-top: 20px; }
-  .kicker { font: 500 13px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ice); }
-  h2 { margin: 12px 0 0; font-size: clamp(32px, 5vw, 54px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 700; max-width: 820px; }
+  section.block { padding-top: 112px; scroll-margin-top: 16px; }
+  .kicker { font: 500 13px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--accent); }
+  h2 { margin-top: 12px; font-size: clamp(32px, 4.8vw, 52px); line-height: 1.04; letter-spacing: -0.035em; max-width: 820px; }
   h2 .dim { color: var(--dim); }
-  .intro { margin-top: 18px; max-width: 680px; color: var(--dim); font-size: 18px; }
+  .intro { margin-top: 16px; max-width: 660px; color: var(--dim); font-size: 18px; }
+  .intro code, .step p code, .card code, .faq code, .note code { font-size: .86em; padding: 2px 6px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
 
   /* pipeline */
-  .pipeline { margin-top: 48px; display: grid; grid-template-columns: 1fr 1.6fr 1fr 1fr; gap: 14px; align-items: stretch; }
-  .stage { position: relative; padding: 22px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); }
-  .stage h3 { margin: 10px 0 6px; font-size: 20px; letter-spacing: -0.02em; }
-  .stage p { margin: 0; font-size: 15px; color: var(--dim); }
+  .pipeline { margin-top: 44px; display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 14px; }
+  .stage { padding: 22px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); }
   .stage .n { font: 500 12px var(--mono); color: var(--faint); }
+  .stage h3 { margin: 8px 0 6px; font-size: 21px; letter-spacing: -0.02em; }
+  .stage p { margin: 0; font-size: 15px; color: var(--dim); }
   .lanes { display: grid; gap: 6px; margin-top: 16px; }
-  .lane { display: grid; grid-template-columns: 58px 1fr; align-items: center; gap: 10px; font: 400 11.5px var(--mono); color: var(--faint); }
-  .lane .bar { height: 9px; border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
-  .lane .bar span { display: block; height: 100%; width: 0; border-radius: 5px; background: linear-gradient(90deg, var(--ice-deep), var(--ice)); }
-  .lane.done .bar span { background: linear-gradient(90deg, var(--ice-deep), var(--ok)); }
-  .lane.audio .bar span { background: linear-gradient(90deg, #6F5BD3, #B5A6FF); }
-  .joined { margin-top: 18px; height: 16px; border-radius: 4px; display: flex; overflow: hidden; }
-  .joined i { flex: 1; background: linear-gradient(90deg, var(--ice-deep), var(--ok)); border-right: 1px solid var(--bg); }
-  .drive { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding: 12px 14px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); font: 400 13px var(--mono); }
-  .drive svg { width: 26px; flex: none; }
-
-  .shot { margin-top: 28px; }
-  .shot figcaption { margin-top: 12px; font: 400 13.5px var(--mono); color: var(--dim); }
-  .shot img { border-radius: 14px; border: 1px solid var(--line-2); box-shadow: var(--shadow); width: 100%; }
-  .shots2 { display: grid; grid-template-columns: 1fr 1.2fr; gap: 22px; margin-top: 44px; align-items: start; }
+  .lane { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 10px; font: 400 11.5px var(--mono); color: var(--faint); }
+  .lane .bar { height: 9px; border-radius: 4px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
+  .lane .bar span { display: block; height: 100%; width: 0; background: var(--accent-2); }
+  .lane.done .bar span { background: var(--accent); }
+  .joined { margin-top: 18px; height: 14px; display: flex; gap: 2px; }
+  .joined i { flex: 1; background: var(--accent); }
+  .shots { display: grid; grid-template-columns: 1fr 1.2fr; gap: 22px; margin-top: 36px; align-items: start; }
+  .shots figure { margin: 0; }
+  .shots img { border-radius: 12px; border: 1px solid var(--line-2); box-shadow: var(--shadow); }
+  .shots figcaption { margin-top: 10px; font: 400 13.5px var(--mono); color: var(--dim); }
 
   /* steps */
-  .steps { margin-top: 44px; display: grid; gap: 16px; counter-reset: s; }
-  .step { display: grid; grid-template-columns: 56px 1fr; gap: 20px; padding: 26px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); }
-  .step::before {
-    counter-increment: s; content: counter(s, decimal-leading-zero);
-    font: 500 15px var(--mono); color: var(--ice); padding-top: 3px;
-  }
-  .step h3 { margin: 0; font-size: 21px; letter-spacing: -0.02em; }
+  .steps { margin-top: 40px; display: grid; gap: 14px; counter-reset: s; }
+  .step { display: grid; grid-template-columns: 52px 1fr; gap: 18px; padding: 24px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); }
+  .step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--text); color: var(--bg); font: 600 15px var(--mono); }
+  .step h3 { font-size: 21px; letter-spacing: -0.02em; }
   .step p { margin: 6px 0 0; color: var(--dim); }
-  .step p code, .faq code, .card code, .intro code { font-size: .88em; padding: 2px 6px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
-  pre {
-    position: relative; margin: 16px 0 0; padding: 18px 20px; border-radius: 12px; overflow-x: auto;
-    background: var(--code-bg); color: #DDE8F0; border: 1px solid rgba(180,220,255,.1); font-size: 14px; line-height: 1.65;
-  }
-  pre .c { color: #5C7282; }
-  pre .k { color: #8FD3FF; }
-  pre .s { color: #A8E6C5; }
-  .copy {
-    position: absolute; top: 10px; right: 10px; height: 30px; padding: 0 10px; border-radius: 8px;
-    border: 1px solid rgba(180,220,255,.16); background: #111820; color: #AFC0CC; font: 400 12px var(--mono); cursor: pointer;
-  }
-  .copy:hover { color: #fff; border-color: #8FD3FF; }
-  .install .copy { position: static; }
+  .step ul { margin: 10px 0 0; padding-left: 20px; color: var(--dim); }
+  pre { position: relative; margin: 14px 0 0; padding: 16px 18px; border-radius: 12px; overflow-x: auto; background: var(--code-bg); color: var(--code-text); font-size: 14px; line-height: 1.65; }
+  pre .c { color: var(--code-dim); }
+  .copy { position: absolute; top: 9px; right: 9px; height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(230,238,242,.18); background: #16242F; color: #B6C6D2; font: 400 12px var(--mono); cursor: pointer; }
+  .copy:hover { color: #fff; }
+  .cmd .copy { position: static; }
+  .os { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  .os div { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); font-size: 14px; color: var(--dim); }
+  .os b { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+  .os code { font-size: 12.5px; color: var(--text); }
 
   /* cards */
-  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 44px; }
-  .card { padding: 30px; border-radius: 18px; border: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; }
-  .card .tag { align-self: flex-start; font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .06em; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--dim); }
-  .card .tag.hot { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
-  .card h3 { margin: 16px 0 8px; font-size: 26px; letter-spacing: -0.03em; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 40px; }
+  .card { padding: 28px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; }
+  .card .tag { align-self: flex-start; font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .05em; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--dim); }
+  .card h3 { margin: 14px 0 6px; font-size: 26px; letter-spacing: -0.03em; }
   .card > p { margin: 0; color: var(--dim); }
-  .card ul { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 15.5px; }
-  .card li { position: relative; padding-left: 28px; }
-  .card li::before { content: "→"; position: absolute; left: 0; color: var(--ice); font-family: var(--mono); }
-  .card .foot { margin-top: auto; padding-top: 22px; }
+  .card ol { margin: 16px 0 0; padding-left: 22px; display: grid; gap: 10px; }
+  .card ol li::marker { font-family: var(--mono); color: var(--accent); }
+  .card ol > li { min-width: 0; }
+  .card .foot { margin-top: auto; padding-top: 22px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .card pre { margin-top: 8px; }
+  .card pre code { background: none; border: 0; padding: 0; color: var(--code-text); font-size: 13.5px; }
 
   /* table */
-  .table-wrap { margin-top: 44px; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
+  .table-wrap { margin-top: 36px; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
   table { width: 100%; border-collapse: collapse; font-size: 15.5px; min-width: 620px; }
-  th, td { padding: 16px 20px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { font: 500 12.5px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--dim); background: var(--panel-2); }
   tr:last-child td { border-bottom: 0; }
   td.num { font-family: var(--mono); white-space: nowrap; }
-  td .good { color: var(--ok); }
-  .small { font-size: 13px; color: var(--faint); font-family: var(--mono); }
-  .note { margin: 14px 0 0; font-size: 14.5px; color: var(--dim); max-width: 760px; }
+  .good { color: var(--ok); }
+  .small { display: block; font: 400 13px var(--mono); color: var(--faint); }
+  .note { margin: 14px 0 0; font-size: 15px; color: var(--dim); max-width: 780px; }
+
+  /* rules */
+  .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 40px; }
+  .rule { padding: 20px 22px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); }
+  .rule b { display: block; font: 600 17px var(--sans); margin-bottom: 4px; }
+  .rule span { color: var(--dim); font-size: 15.5px; }
+  .rule.no b::before { content: "Don't · "; color: var(--ember); font: 500 13px var(--mono); }
+  .rule.yes b::before { content: "Do · "; color: var(--ok); font: 500 13px var(--mono); }
 
   /* faq */
-  .faq { margin-top: 36px; display: grid; gap: 10px; max-width: 880px; }
+  .faq { margin-top: 32px; display: grid; gap: 10px; max-width: 860px; }
   details { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 0 22px; }
-  summary { cursor: pointer; list-style: none; padding: 20px 0; font-weight: 500; font-size: 18px; display: flex; justify-content: space-between; gap: 16px; }
+  summary { cursor: pointer; list-style: none; padding: 18px 0; font-weight: 600; font-size: 17.5px; display: flex; justify-content: space-between; gap: 16px; }
   summary::-webkit-details-marker { display: none; }
   summary::after { content: "+"; font-family: var(--mono); color: var(--dim); }
   details[open] summary::after { content: "–"; }
-  details p { margin: 0 0 20px; color: var(--dim); }
+  details p { margin: 0 0 18px; color: var(--dim); }
 
-  /* footer */
-  .cta-end { margin-top: 130px; padding: 72px 32px; text-align: center; border-radius: 24px; border: 1px solid var(--line-2);
-    background: radial-gradient(600px 300px at 50% 0%, var(--glow), transparent 70%), var(--panel); }
+  .cta-end { margin-top: 120px; padding: 64px 28px; text-align: center; border-radius: 22px; border: 1px solid var(--line-2); background: var(--panel); }
   .cta-end h2 { margin-inline: auto; }
-  footer { padding: 48px 0 56px; color: var(--faint); font: 400 13.5px var(--mono); }
+  .cta-end svg { width: 56px; height: 56px; margin: 0 auto 18px; display: block; }
+  footer { padding: 44px 0 52px; color: var(--faint); font: 400 13.5px var(--mono); }
   footer .wrap { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
   footer a { color: var(--dim); }
 
-  @media (max-width: 900px) {
-    .pipeline { grid-template-columns: 1fr 1fr; }
-    .shots2 { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 900px) { .pipeline, .shots { grid-template-columns: 1fr; } }
   @media (max-width: 720px) {
-    .nav nav { display: none; }
-    .nav .wrap { gap: 12px; }
-    .nav .gh-label { display: none; }
+    .nav nav, .nav .gh-label { display: none; }
+    .nav .wrap { gap: 10px; }
     .brand { margin-right: auto; }
-    .hero { padding-top: 64px; }
+    .hero { padding-top: 60px; }
     .stats { grid-template-columns: 1fr 1fr; }
     .stat:nth-child(2) { border-right: 0; }
     .stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
     .stat .v { font-size: 30px; }
-    .pipeline, .cards { grid-template-columns: 1fr; }
-    .step { grid-template-columns: 1fr; gap: 8px; padding: 22px; }
-    section.block { padding-top: 88px; }
-    .install { font-size: 12.5px; }
+    .grid-2, .rules, .os { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 1fr; gap: 10px; padding: 20px; }
+    section.block { padding-top: 84px; }
+    .cmd { font-size: 12.5px; }
     .window-bar .fname { display: none; }
-    .eyebrow { font-size: 11px; letter-spacing: .04em; }
-    .cta-end { padding: 52px 20px; }
+    .cta-end { padding: 48px 18px; }
   }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .lane .bar span { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
-<div class="grid-bg" aria-hidden="true"></div>
-
 <header class="nav">
   <div class="wrap">
     <a class="brand" href="#top" aria-label="coldframe home">
-      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="4" y="4" width="56" height="56" rx="14" fill="none" stroke="var(--ice)" stroke-width="5"/><rect x="16" y="16" width="14" height="32" rx="3" fill="var(--ice-deep)"/><rect x="34" y="16" width="14" height="32" rx="3" fill="var(--ice)"/></svg>
+      <svg viewBox="0 0 64 64" aria-hidden="true"><polygon points="11,7 23.8,13.4 23.8,50.6 11,57" fill="#1D5FD0" stroke="#1D5FD0" stroke-width="2.2" stroke-linejoin="round"/><polygon points="28,15.5 40.8,21.9 40.8,42.1 28,48.5" fill="#1FA0DC" stroke="#1FA0DC" stroke-width="2.2" stroke-linejoin="round"/><polygon points="45,24 57,32 45,40" fill="#7FD6EE" stroke="#7FD6EE" stroke-width="2.2" stroke-linejoin="round"/></svg>
       coldframe
     </a>
     <nav>
       <a href="#how">How it works</a>
-      <a href="#start">Quickstart</a>
-      <a href="#backends">Actions vs Colab</a>
+      <a href="#setup">Setup</a>
+      <a href="#connect">Drive &amp; Colab</a>
+      <a href="#rules">Video rules</a>
       <a href="#faq">FAQ</a>
     </nav>
-    <button class="icon-btn" id="theme" type="button" aria-label="Toggle light and dark theme">
+    <button class="icon-btn" id="theme" type="button" aria-label="Switch light and dark theme">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
     </button>
     <a class="icon-btn" href="https://github.com/Razee4315/coldframe">
@@ -309,15 +244,15 @@
 <main id="top">
   <div class="hero">
     <div class="wrap">
-      <span class="eyebrow"><span class="dot"></span>Remotion · GitHub Actions · Colab · Drive</span>
+      <div class="eyebrow">For Remotion videos</div>
       <h1>Render in the cloud.<br><span class="sub">Your laptop stays <span class="cold">cold.</span></span></h1>
-      <p class="lede">coldframe renders your Remotion videos on free cloud machines. It splits every video across parallel GitHub Actions runners, stitches the pieces losslessly and drops the MP4 in your Google Drive.</p>
+      <p class="lede">coldframe sends your Remotion render to free GitHub machines, splits it across up to 20 of them, checks every frame, and brings the MP4 back to you. Your computer stays free the whole time.</p>
       <div class="ctas">
-        <a class="btn primary" href="#start">Get started
+        <a class="btn primary" href="#setup">Set up in one command
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         <a class="btn" href="https://github.com/Razee4315/coldframe">View on GitHub</a>
       </div>
-      <div class="install"><span class="p">$</span><code>npx github:Razee4315/coldframe init</code><button class="copy" data-copy="npx github:Razee4315/coldframe init">Copy</button></div>
+      <div class="cmd"><span class="p">$</span><code>npx github:Razee4315/coldframe setup</code><button class="copy" data-copy="npx github:Razee4315/coldframe setup">Copy</button></div>
 
       <div class="demo">
         <div class="window">
@@ -327,187 +262,189 @@
           </div>
           <video id="demo" src="media/demo.mp4" poster="media/poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="coldframe demo video"></video>
         </div>
-        <p class="caption">This video was rendered by coldframe: <b>480 frames on 8 GitHub runners</b>, joined, verified and downloaded with one command. <a href="https://github.com/Razee4315/coldframe/actions/runs/35858298652">See the run</a></p>
+        <p class="caption">Made with Remotion, rendered by coldframe: <b>600 frames on 8 GitHub machines</b>, every frame checked. <a href="https://github.com/Razee4315/coldframe/actions/runs/35863387579">See the run</a></p>
       </div>
     </div>
   </div>
 
   <div class="wrap">
     <div class="stats" role="list">
-      <div class="stat" role="listitem"><div class="v">20<small>machines</small></div><div class="k">max in parallel</div></div>
+      <div class="stat" role="listitem"><div class="v">20<small>machines</small></div><div class="k">at once, at most</div></div>
       <div class="stat" role="listitem"><div class="v">0<small>%</small></div><div class="k">of your CPU used</div></div>
-      <div class="stat" role="listitem"><div class="v">100<small>%</small></div><div class="k">frames verified</div></div>
+      <div class="stat" role="listitem"><div class="v">100<small>%</small></div><div class="k">of frames checked</div></div>
       <div class="stat" role="listitem"><div class="v">$0</div><div class="k">on public repos</div></div>
     </div>
 
     <!-- HOW -->
     <section class="block" id="how">
       <div class="kicker">How it works</div>
-      <h2>One timeline in, one MP4 out. <span class="dim">Many machines in between.</span></h2>
-      <p class="intro">A render job normally runs on one computer, frame after frame. coldframe cuts the timeline into ranges and renders every range at the same time on its own runner.</p>
+      <h2>One video in, one MP4 out. <span class="dim">Many machines in between.</span></h2>
+      <p class="intro">Normally one computer renders every frame, one after another. coldframe cuts the video into equal pieces and renders each piece on its own GitHub machine, all at the same time.</p>
 
       <div class="pipeline" id="pipe">
         <div class="stage">
           <div class="n">01 · plan</div>
-          <h3>Bundle and split</h3>
-          <p>Bundles the project once, reads the composition's length and cuts it into equal frame ranges.</p>
+          <h3>Split</h3>
+          <p>Packs your project once, reads how long the video is, and cuts it into equal frame ranges.</p>
         </div>
         <div class="stage">
           <div class="n">02 · render</div>
           <h3>Render in parallel</h3>
-          <p>Each runner renders its own range, with its exact slice of the soundtrack in lossless PCM.</p>
+          <p>Every machine renders its range, with its exact slice of the audio.</p>
           <div class="lanes" aria-hidden="true">
-            <div class="lane"><span>chunk 00</span><div class="bar"><span></span></div></div>
-            <div class="lane"><span>chunk 01</span><div class="bar"><span></span></div></div>
-            <div class="lane"><span>chunk 02</span><div class="bar"><span></span></div></div>
-            <div class="lane"><span>chunk 03</span><div class="bar"><span></span></div></div>
-            <div class="lane"><span>chunk 04</span><div class="bar"><span></span></div></div>
-            <div class="lane"><span>chunk 05</span><div class="bar"><span></span></div></div>
-            <div class="lane"><span>chunk 06</span><div class="bar"><span></span></div></div>
-            <div class="lane"><span>chunk 07</span><div class="bar"><span></span></div></div>
+            <div class="lane"><span>machine 1</span><div class="bar"><span></span></div></div>
+            <div class="lane"><span>machine 2</span><div class="bar"><span></span></div></div>
+            <div class="lane"><span>machine 3</span><div class="bar"><span></span></div></div>
+            <div class="lane"><span>machine 4</span><div class="bar"><span></span></div></div>
+            <div class="lane"><span>machine 5</span><div class="bar"><span></span></div></div>
+            <div class="lane"><span>machine 6</span><div class="bar"><span></span></div></div>
+            <div class="lane"><span>machine 7</span><div class="bar"><span></span></div></div>
+            <div class="lane"><span>machine 8</span><div class="bar"><span></span></div></div>
           </div>
         </div>
         <div class="stage">
           <div class="n">03 · stitch</div>
-          <h3>Join and verify</h3>
-          <p>Joins the chunks without re-encoding the video, encodes the audio once, then counts every frame. A wrong count fails the run.</p>
+          <h3>Join, check, deliver</h3>
+          <p>Joins the pieces without re-encoding, counts every frame, and hands you the MP4 (and saves it to Google Drive if you want).</p>
           <div class="joined" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        </div>
-        <div class="stage">
-          <div class="n">04 · deliver</div>
-          <h3>Drop it in Drive</h3>
-          <p>The MP4 lands in your Google Drive and as a download on the run. The CLI brings it to your PC.</p>
-          <div class="drive">
-            <svg viewBox="0 0 40 36" aria-hidden="true"><path d="M13 1h14l13 22-7 12z" fill="#8FD3FF" opacity=".9"/><path d="M13 1 0 23l7 12L20 13z" fill="#3A8DC4"/><path d="M7 35h26l7-12H14z" fill="#7FE3B0" opacity=".9"/></svg>
-            <span>coldframe/<br>ColdframePromo.mp4</span>
-          </div>
         </div>
       </div>
 
-      <div class="shots2">
-        <figure class="shot" style="margin:0">
-          <img src="media/actions-run.png" alt="GitHub Actions run graph: Plan, eight Chunk jobs and an Audio job in parallel, then Stitch + deliver" loading="lazy" width="1796" height="1376">
-          <figcaption>A real run of the demo above: plan, 8 chunks in parallel, then stitch.</figcaption>
+      <div class="shots">
+        <figure>
+          <img src="media/actions-run.png" alt="GitHub Actions run graph: Plan, eight Chunk jobs in parallel, then Stitch + deliver" loading="lazy" width="1796" height="1376">
+          <figcaption>A real run: plan, 8 machines at once, stitch.</figcaption>
         </figure>
-        <figure class="shot" style="margin:0">
+        <figure>
           <img src="media/cli.png" alt="Terminal: coldframe render starts the run, waits for the eight chunks and the stitch, then saves the MP4" loading="lazy" width="2204" height="1168">
-          <figcaption>One command from your terminal: start, wait, download.</figcaption>
+          <figcaption>One command starts it, waits, and downloads the MP4.</figcaption>
         </figure>
       </div>
     </section>
 
-    <!-- QUICKSTART -->
-    <section class="block" id="start">
-      <div class="kicker">Quickstart</div>
-      <h2>Three steps. <span class="dim">About five minutes.</span></h2>
-      <p class="intro">You need a Remotion project on GitHub, Node 18+ and the <a href="https://cli.github.com">GitHub CLI</a> signed in with <code>gh auth login</code>.</p>
+    <!-- SETUP -->
+    <section class="block" id="setup">
+      <div class="kicker">Setup</div>
+      <h2>Three steps. <span class="dim">About five minutes, once.</span></h2>
+      <p class="intro">You need a Remotion project on your computer and <a href="https://nodejs.org">Node.js</a> 18 or newer.</p>
 
       <div class="steps">
         <div class="step"><div>
-          <h3>Add the workflow</h3>
-          <p>Run this in your Remotion project root. It adds <code>.github/workflows/coldframe.yml</code>, which calls coldframe's shared render workflow.</p>
-<pre><button class="copy">Copy</button><code>npx github:Razee4315/coldframe init
-git add .github && git commit -m "Add coldframe" && git push</code></pre>
+          <h3>Install the GitHub CLI</h3>
+          <p>coldframe uses it to talk to GitHub. Run the line for your system, then open a new terminal.</p>
+          <div class="os">
+            <div><b>Windows</b><code>winget install GitHub.cli</code></div>
+            <div><b>macOS</b><code>brew install gh</code></div>
+            <div><b>Linux</b><a href="https://cli.github.com">cli.github.com</a></div>
+          </div>
         </div></div>
         <div class="step"><div>
-          <h3>Render in the cloud</h3>
-          <p>Starts the render, waits for it, and saves the MP4 to <code>out/cloud/</code>. You can also start it from the Actions tab.</p>
-<pre><button class="copy">Copy</button><code>npx github:Razee4315/coldframe render MyComp --chunks 8</code></pre>
+          <h3>Run setup in your project folder</h3>
+          <p>It walks you through everything and asks before it creates anything:</p>
+          <ul>
+            <li>signs you in to GitHub (you paste a code in your browser)</li>
+            <li>puts your project on GitHub if it isn't there yet</li>
+            <li>adds the render workflow, the Claude Code skills and the Colab connection</li>
+            <li>optionally connects Google Drive</li>
+          </ul>
+<pre><button class="copy">Copy</button><code>npx github:Razee4315/coldframe setup</code></pre>
         </div></div>
         <div class="step"><div>
-          <h3>Optional: deliver to Google Drive</h3>
-          <p>Sign in to Google once with <a href="https://rclone.org/drive/">rclone</a>, then save the config as a repo secret. After that, every render is copied to <code>My Drive/coldframe/</code>.</p>
-<pre><button class="copy">Copy</button><code><span class="c"># name the remote "gdrive" and pick scope 1 (full Drive access)</span>
-rclone config
-gh secret set RCLONE_CONF &lt; "$(rclone config file | tail -1)"</code></pre>
+          <h3>Render</h3>
+          <p>Use the id of the composition you want (the <code>id</code> of your Remotion <code>&lt;Composition&gt;</code>). The MP4 lands in <code>out/cloud/</code>.</p>
+<pre><button class="copy">Copy</button><code>npx github:Razee4315/coldframe render MyVideo</code></pre>
         </div></div>
       </div>
     </section>
 
-    <!-- BACKENDS -->
-    <section class="block" id="backends">
-      <div class="kicker">Two backends</div>
-      <h2>GitHub Actions for speed. <span class="dim">Colab for everything else.</span></h2>
+    <!-- CONNECT -->
+    <section class="block" id="connect">
+      <div class="kicker">Optional</div>
+      <h2>Google Drive and Colab. <span class="dim">A few clicks each.</span></h2>
+      <p class="intro">Neither needs a password or key copied anywhere. You sign in to Google in your browser, and that's it.</p>
 
-      <div class="cards">
+      <div class="grid-2">
         <div class="card">
-          <span class="tag hot">Default · fastest</span>
-          <h3>GitHub Actions</h3>
-          <p>A reusable workflow that renders on up to 20 runners at once. No browser tab, no babysitting.</p>
-          <ul>
-            <li>Free and unlimited on public repos, 2,000 min/month on private ones</li>
-            <li>WebGL and three.js work on CPU runners (<code>--gl=swangle</code>)</li>
-            <li>Frame-count check on every run, sample-exact audio joins</li>
-          </ul>
-          <div class="foot"><a class="btn" href="https://github.com/Razee4315/coldframe/blob/main/.github/workflows/render.yml">Read the workflow</a></div>
+          <span class="tag">Save renders to Drive</span>
+          <h3>Google Drive</h3>
+          <p>Every finished render is also copied to <code>My Drive/coldframe/</code>.</p>
+          <ol>
+            <li>Install rclone, the tool that uploads to Drive:
+<pre><code>winget install Rclone.Rclone   <span class="c"># Windows</span>
+brew install rclone            <span class="c"># macOS</span></code></pre></li>
+            <li>Run this in your project folder:
+<pre><button class="copy">Copy</button><code>npx github:Razee4315/coldframe drive</code></pre></li>
+            <li>A Google page opens. Pick your account and click <b>Allow</b>. coldframe can only see files it creates itself, not the rest of your Drive.</li>
+          </ol>
         </div>
         <div class="card">
-          <span class="tag">Experiments · GPU</span>
+          <span class="tag">Free GPU · experimental</span>
           <h3>Google Colab</h3>
-          <p>A notebook and a small helper that run renders in the background on a Colab runtime, then save to Drive.</p>
-          <ul>
-            <li>Claude Code can drive it through Google's <a href="https://github.com/googlecolab/colab-mcp">Colab MCP server</a></li>
-            <li>Every call returns in seconds, so it works within the MCP's 30 s timeout</li>
-            <li>Sometimes a free T4 GPU, one click to save to Drive</li>
-          </ul>
-          <div class="foot"><a class="btn" href="https://colab.research.google.com/github/Razee4315/coldframe/blob/main/colab/coldframe.ipynb">Open in Colab</a></div>
+          <p>A free cloud computer, sometimes with a T4 GPU. Useful for 3D (WebGL / three.js) scenes, which GitHub's machines render without a GPU.</p>
+          <ol>
+            <li>Install <a href="https://docs.astral.sh/uv/">uv</a>: <code>winget install astral-sh.uv</code> or <code>brew install uv</code>.</li>
+            <li>Open your project in Claude Code and approve the <b>colab-mcp</b> server (setup added it).</li>
+            <li>Stay signed in to Google in your browser, then ask Claude: <i>"render MyVideo on Colab"</i>. A Colab tab opens and connects by itself.</li>
+            <li>For the GPU: in that tab, <b>Runtime → Change runtime type → T4 GPU</b>.</li>
+          </ol>
+          <div class="foot"><a class="btn" href="https://colab.research.google.com/github/Razee4315/coldframe/blob/main/colab/coldframe.ipynb">Or run the notebook yourself</a></div>
         </div>
       </div>
+    </section>
 
-<pre><button class="copy">Copy</button><code><span class="c"># inside a Colab notebook (or sent by Claude through colab-mcp)</span>
-!curl -fsSL https://raw.githubusercontent.com/Razee4315/coldframe/main/colab/coldframe_colab.py -o coldframe_colab.py
-<span class="k">import</span> coldframe_colab <span class="k">as</span> cf
-cf.setup(<span class="s">"you/your-video"</span>)      <span class="c"># installs in the background</span>
-cf.render(<span class="s">"MyComp"</span>)             <span class="c"># renders in the background</span>
-cf.status()                       <span class="c"># poll until done</span>
-cf.to_drive(<span class="s">"coldframe"</span>)         <span class="c"># My Drive/coldframe/MyComp-….mp4</span></code></pre>
-
+    <!-- NUMBERS -->
+    <section class="block" id="numbers">
+      <div class="kicker">Honest numbers</div>
+      <h2>When the cloud wins, <span class="dim">and when it doesn't.</span></h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Measured</th><th>Laptop (i7, 4 cores / 8 threads)</th><th>coldframe on Actions</th></tr></thead>
+          <thead><tr><th>Measured</th><th>Laptop (4 cores / 8 threads)</th><th>coldframe on GitHub</th></tr></thead>
           <tbody>
-            <tr><td>16 s demo above<br><span class="small">480 frames, 1080p, 30 fps</span></td><td class="num">57 s</td><td class="num">1 min 42 s <span class="small">(8 machines)</span></td></tr>
-            <tr><td>88 s launch film<br><span class="small">5,280 frames, 1080p, 60 fps, three.js 360° scenes</span></td><td class="num">12–20 min, fans at full speed</td><td class="num">23 min 52 s <span class="small">(20 machines, private repo)</span></td></tr>
-            <tr><td>Your computer while it renders</td><td>Busy and hot</td><td><span class="good">Free, can even be switched off</span></td></tr>
-            <tr><td>Output check</td><td class="num">–</td><td class="num"><span class="good">5,290 / 5,290 frames, median 54.9 dB PSNR vs. the laptop render</span></td></tr>
+            <tr><td>The 20 s demo above<span class="small">600 frames, 1080p, 30 fps</span></td><td class="num">46 s</td><td class="num">1 min 53 s <span class="small">8 machines, including setup</span></td></tr>
+            <tr><td>Your computer while it renders</td><td>Busy, fans on</td><td><span class="good">Free, can even be off</span></td></tr>
+            <tr><td>3D scenes (WebGL / three.js)</td><td>Uses your GPU</td><td>No GPU, drawn in software: much slower</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="note">Honest numbers: every machine spends about 40 s getting ready, so short clips are faster at home. And cloud runners have no GPU, so three.js / WebGL scenes render in software: the 88 s film with 360° panoramas took longer in the cloud than on a laptop GPU. coldframe wins when your computer is needed for something else, or when the video is long and mostly HTML, video and images. Public repos get 4-vCPU runners, twice the private ones.</p>
+      <p class="note">Each machine spends about 40 s getting ready, so short videos are still quicker at home. coldframe is for when you need your computer while a video renders, and for long videos made of text, UI, images and footage. For 3D-heavy videos, render the 3D shots once on a GPU (your laptop or Colab) and use them as clips.</p>
     </section>
 
-    <!-- CLAUDE -->
-    <section class="block" id="claude">
-      <div class="kicker">Built for Claude Code</div>
-      <h2>“Render it in the cloud.” <span class="dim">That's the whole instruction.</span></h2>
-      <p class="intro">coldframe ships a Claude Code skill and an MCP config. Claude edits your Remotion code, checks a few low-res frames locally, pushes, renders on Actions or Colab, then looks at the result before handing it over.</p>
-<pre><button class="copy">Copy</button><code><span class="c"># in your Remotion repo: give Claude the skill and the Colab MCP server</span>
-mkdir -p .claude/skills/coldframe
-curl -fsSL https://raw.githubusercontent.com/Razee4315/coldframe/main/.claude/skills/coldframe/SKILL.md -o .claude/skills/coldframe/SKILL.md
-claude mcp add colab-mcp -- uvx git+https://github.com/googlecolab/colab-mcp</code></pre>
+    <!-- RULES -->
+    <section class="block" id="rules">
+      <div class="kicker">Video rules</div>
+      <h2>Videos that don't look AI-made.</h2>
+      <p class="intro">Setup adds a <a href="https://github.com/Razee4315/coldframe/blob/main/.claude/skills/video-rules/SKILL.md">video-rules skill</a> to your project, so Claude Code follows these whenever it makes a video. The demo above was made with them.</p>
+      <div class="rules">
+        <div class="rule no"><b>Open with a logo</b><span>Spend the first 3 seconds on the problem or the result.</span></div>
+        <div class="rule yes"><b>One goal, one message</b><span>Show one result clearly instead of listing every feature.</span></div>
+        <div class="rule no"><b>Default dark + glow + purple</b><span>No particles, no bloom. Use your real brand colours and fonts.</span></div>
+        <div class="rule yes"><b>Mix transitions, each with a reason</b><span>Hard cut on a beat, match cut, a wipe. Not the same fade every time.</span></div>
+        <div class="rule no"><b>Make everything bounce</b><span>One emphasis technique, on the word that matters. Restraint reads as quality.</span></div>
+        <div class="rule yes"><b>Real, sourced numbers</b><span>Never imply a comparison you haven't measured.</span></div>
+        <div class="rule no"><b>Tiny text</b><span>Seven words or fewer on screen, readable on a phone.</span></div>
+        <div class="rule yes"><b>Sound effects and a clear CTA</b><span>Whoosh, click, chime. End on one action and a URL.</span></div>
+      </div>
     </section>
 
     <!-- FAQ -->
     <section class="block" id="faq">
-      <div class="kicker">Straight answers</div>
+      <div class="kicker">Questions</div>
       <h2>FAQ</h2>
       <div class="faq">
-        <details><summary>Is it really free?</summary><p>On public repos, GitHub Actions minutes on standard runners are free. Private repos get 2,000 free minutes a month, and every chunk counts, so 8 chunks of 3 minutes use 24 minutes. Colab's free tier has no fixed price but limits usage and doesn't promise a GPU.</p></details>
-        <details><summary>Will the joins between chunks show?</summary><p>No. Remotion renders each frame on its own, so a frame looks the same whichever machine renders it. The video chunks are joined without re-encoding. Each chunk carries its slice of the audio as lossless PCM, so the joined soundtrack is bit-identical to a single-pass render, and the run fails if the final frame count doesn't match.</p></details>
-        <details><summary>Does three.js or WebGL work?</summary><p>Yes, and the output matches a GPU render. But runners have no GPU, so Chrome draws WebGL in software (<code>--gl=swangle</code>, the default), and heavy 3D scenes are slow. Measured: a chunk full of 360° panorama frames took 22 min, while chunks without them took 9. If your video is mostly 3D, render those shots once on a GPU (your laptop or Colab) and use the clips.</p></details>
-        <details><summary>Why not Remotion Lambda?</summary><p>Lambda is faster and made for production, but it needs an AWS account and costs money per render. coldframe is for people who want free cloud renders from a plain GitHub repo.</p></details>
-        <details><summary>Where do my files go? Are they private?</summary><p>Your project stays in your own repo. Use a private repo if the footage is confidential. Rendered chunks are temporary artifacts deleted after a day, and the final MP4 stays on the run (90 days by default) and in your own Drive.</p></details>
-        <details><summary>What about Remotion's license?</summary><p>coldframe is MIT licensed. Remotion has its own license: it's free for individuals and companies of up to 3 people. Larger companies need a <a href="https://www.remotion.pro/license">company license</a>.</p></details>
+        <details><summary>Is it really free?</summary><p>Yes. On public repos, GitHub machines are free with no limit. Private repos get 2,000 free machine-minutes a month, and each machine counts separately (8 machines for 3 minutes = 24 minutes). If you run out, GitHub stops the job. You're never charged unless you add a payment method.</p></details>
+        <details><summary>Will the joins between pieces show?</summary><p>No. Each frame is rendered on its own, the video pieces are joined without re-encoding, and each piece carries its audio as lossless PCM, so the soundtrack joins sample-exactly (tested bit-for-bit). If the final frame count is wrong, the run fails instead of giving you a broken file.</p></details>
+        <details><summary>Does three.js / WebGL work?</summary><p>Yes, and it looks the same as a GPU render, but GitHub's machines have no GPU, so 3D is drawn in software and is much slower. For 3D-heavy videos, try Colab's T4 GPU (<code>gpu=True</code> in the Colab helper, still experimental) or render the 3D shots once on your own GPU.</p></details>
+        <details><summary>What does coldframe get access to?</summary><p>On GitHub: only the repo you run it in. On Google Drive: only files coldframe creates itself (Google's <code>drive.file</code> access), stored as a secret in your repo. Temporary render pieces are deleted after a day.</p></details>
+        <details><summary>Why not Remotion Lambda?</summary><p>Lambda is faster and built for production, but needs an AWS account and costs money per render. coldframe is for free renders from a plain GitHub repo.</p></details>
+        <details><summary>What about Remotion's license?</summary><p>coldframe is MIT licensed. Remotion has its own license: free for individuals and companies of up to 3 people, larger companies need a <a href="https://www.remotion.pro/license">company license</a>.</p></details>
       </div>
     </section>
 
     <div class="cta-end">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><polygon points="11,7 23.8,13.4 23.8,50.6 11,57" fill="#1D5FD0" stroke="#1D5FD0" stroke-width="2.2" stroke-linejoin="round"/><polygon points="28,15.5 40.8,21.9 40.8,42.1 28,48.5" fill="#1FA0DC" stroke="#1FA0DC" stroke-width="2.2" stroke-linejoin="round"/><polygon points="45,24 57,32 45,40" fill="#7FD6EE" stroke="#7FD6EE" stroke-width="2.2" stroke-linejoin="round"/></svg>
       <h2>Keep your laptop cold.</h2>
-      <p class="intro" style="margin-inline:auto">Add one workflow file and render your next video in the cloud.</p>
-      <div class="ctas">
-        <a class="btn primary" href="https://github.com/Razee4315/coldframe">Star on GitHub</a>
-        <a class="btn" href="#start">Quickstart</a>
-      </div>
+      <p class="intro" style="margin-inline:auto">One command to set up. One command to render.</p>
+      <div class="cmd"><span class="p">$</span><code>npx github:Razee4315/coldframe setup</code><button class="copy" data-copy="npx github:Razee4315/coldframe setup">Copy</button></div>
     </div>
   </div>
 </main>
@@ -520,25 +457,22 @@ claude mcp add colab-mcp -- uvx git+https://github.com/googlecolab/colab-mcp</co
 </footer>
 
 <script>
-  // theme toggle (remembered per browser)
   (() => {
     const root = document.documentElement;
     try { const t = localStorage.getItem("cf-theme"); if (t) root.dataset.theme = t; } catch {}
     document.getElementById("theme").addEventListener("click", () => {
-      const dark = root.dataset.theme ? root.dataset.theme === "dark" : !matchMedia("(prefers-color-scheme: light)").matches;
+      const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
       root.dataset.theme = dark ? "light" : "dark";
       try { localStorage.setItem("cf-theme", root.dataset.theme); } catch {}
     });
   })();
 
-  // copy buttons
   document.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", async () => {
     const text = b.dataset.copy || b.parentElement.querySelector("code").innerText;
     try { await navigator.clipboard.writeText(text.trim()); b.textContent = "Copied"; } catch { b.textContent = "Select + copy"; }
     setTimeout(() => (b.textContent = "Copy"), 1600);
   }));
 
-  // sound toggle
   const video = document.getElementById("demo"), mute = document.getElementById("mute");
   mute.addEventListener("click", () => {
     video.muted = !video.muted;
@@ -547,20 +481,19 @@ claude mcp add colab-mcp -- uvx git+https://github.com/googlecolab/colab-mcp</co
     mute.querySelector("span").textContent = video.muted ? "Sound off" : "Sound on";
   });
 
-  // animate the render lanes when the pipeline scrolls into view
   (() => {
     const bars = [...document.querySelectorAll(".lane .bar span")];
     const ends = [0.92, 0.84, 1, 0.88, 0.97, 0.86, 0.93, 0.9];
-    const run = () => bars.forEach((b, i) => {
-      b.style.transition = "none"; b.style.width = "0";
-      b.getBoundingClientRect();
-      b.style.transition = `width ${1.4 + ends[i]}s cubic-bezier(.45,0,.2,1)`;
-      b.style.width = "100%";
-      setTimeout(() => b.closest(".lane").classList.add("done"), (1.4 + ends[i]) * 1000);
-    });
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) { bars.forEach((b) => (b.style.width = "100%")); return; }
-    new IntersectionObserver((es, io) => { if (es[0].isIntersecting) { run(); io.disconnect(); } }, { threshold: 0.4 })
-      .observe(document.getElementById("pipe"));
+    new IntersectionObserver((es, io) => {
+      if (!es[0].isIntersecting) return;
+      io.disconnect();
+      bars.forEach((b, i) => {
+        b.style.transition = `width ${1.4 + ends[i]}s cubic-bezier(.45,0,.2,1)`;
+        b.style.width = "100%";
+        setTimeout(() => b.closest(".lane").classList.add("done"), (1.4 + ends[i]) * 1000);
+      });
+    }, { threshold: 0.4 }).observe(document.getElementById("pipe"));
   })();
 </script>
 </body>
