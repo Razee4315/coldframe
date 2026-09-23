@@ -83,6 +83,9 @@ Each of these is fine once, on purpose. Together they read as "made by a templat
 - Cut on the beat. A beat of silence right before the reveal lands hard.
 - Duck the music under voiceover. Fade out cleanly on the end card.
 - Burn in captions for social (70–85% watch muted). Ship an SRT for YouTube and web.
+- **Don't synthesise the soundtrack in code.** Sound built from numpy noise and sine waves (the "laptop fan hum", pads, pings in `make_soundtrack.py` / `make_launch_soundtrack.py`) sounded bad on the launch film and was cut. Use real, produced music and SFX that the user supplies or picks (royalty-free or licensed), or no sound at all.
+- **Silent by default** for the website hero, README and anything that autoplays muted. Design every video to work with no sound.
+- Before a full render with sound, send the user a 10–15 s audio sample and wait for their OK.
 
 ## 8. Brand and CTA
 
