@@ -3,3 +3,8 @@
 *.mp4 binary
 *.png binary
 *.jpg binary
+
+# Not part of the CLI package: keeps `npx github:Razee4315/coldframe` a small download.
+example/ export-ignore
+docs/ export-ignore
+scripts/ export-ignore
