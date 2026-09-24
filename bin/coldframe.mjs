@@ -293,7 +293,9 @@ async function render(opts) {
 
 /** Download the final MP4(s) of a run into `out` (default out/cloud); returns the saved paths. */
 function saveRender(repo, id, out = "out/cloud") {
-  const names = gh(["api", `repos/${repo}/actions/runs/${id}/artifacts?per_page=100`, "--jq", ".artifacts[] | select(.expired | not) | .name"])
+  const r = run("gh", ["api", `repos/${repo}/actions/runs/${id}/artifacts?per_page=100`, "--jq", ".artifacts[] | select(.expired | not) | .name"]);
+  if (r.status !== 0) die(`couldn't find render ${id} in ${repo}. See your renders with \`coldframe runs\`.`);
+  const names = r.stdout
     .split(/\r?\n/)
     .filter(Boolean)
     // Skip only the workflow's own temporary artifacts, never a render the user named "coldframe-…".
