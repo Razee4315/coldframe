@@ -2,7 +2,7 @@
 // coldframe CLI: render Remotion videos on free cloud machines.
 // Needs the GitHub CLI (`gh`). Zero npm dependencies.
 //
-//   coldframe setup                     one-time setup in your Remotion project (start here)
+//   coldframe setup [--public|--private] one-time setup in your Remotion project (start here)
 //   coldframe render <Comp> [options]   render in the cloud, wait, download the MP4
 //   coldframe download [run-id]         download the MP4 of a finished render (default: the latest)
 //   coldframe runs                      list recent cloud renders
@@ -141,7 +141,7 @@ build/
 .DS_Store
 `;
 
-async function setup() {
+async function setup(opts) {
   requireProject();
   console.log("coldframe setup: a few checks, then you're ready to render in the cloud.");
 
@@ -167,8 +167,11 @@ async function setup() {
     const name = path.basename(process.cwd()).toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
     console.log(`  This folder isn't on GitHub yet. coldframe needs it there to render.
   Public repos render for free with no limit. Private repos get 2,000 free minutes a month.`);
-    const vis = await ask(`Create it as "${name}"? [public/private/no]`, "no");
-    if (!vis.startsWith("pub") && !vis.startsWith("pri")) die("stopped. Push this project to GitHub, then run setup again.");
+    const vis = opts.public ? "public" : opts.private ? "private" : await ask(`Create it as "${name}"? [public/private/no]`, "no");
+    if (!vis.startsWith("pub") && !vis.startsWith("pri")) {
+      die(`stopped: this project isn't on GitHub yet. Run setup again and answer public or private,
+  or pass --public / --private (e.g. \`coldframe setup --private\`).`);
+    }
     // Never upload node_modules or renders: they are huge and the cloud installs its own.
     if (!fs.existsSync(".gitignore")) {
       fs.writeFileSync(".gitignore", GITIGNORE);
@@ -346,7 +349,7 @@ const cmd = opts._[0];
 for (const k of ["chunks", "props", "ref", "out", "name", "repo"]) if (opts[k] === true) die(`--${k} needs a value.`);
 if (opts.version) console.log(JSON.parse(fs.readFileSync(path.join(PKG, "package.json"), "utf8")).version);
 else if (opts.help || cmd === "help") help();
-else if (cmd === "setup") await setup();
+else if (cmd === "setup") await setup(opts);
 else if (cmd === "render") await render(opts);
 else if (cmd === "download") download(opts);
 else if (cmd === "init") init();

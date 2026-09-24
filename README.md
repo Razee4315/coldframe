@@ -110,7 +110,7 @@ Each machine spends about 40 s getting ready, so **short videos are still quicke
 ## CLI
 
 ```text
-coldframe setup                     one-time setup in your Remotion project (start here)
+coldframe setup [--public|--private] one-time setup in your Remotion project (start here)
 coldframe render <Comp> [options]   render in the cloud, wait, download the MP4
 coldframe download [run-id]         download the MP4 of a finished render (default: the latest)
 coldframe runs                      list recent cloud renders

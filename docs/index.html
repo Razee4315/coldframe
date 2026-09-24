@@ -513,10 +513,9 @@ Do everything for me, one step at a time, and tell me briefly what you're doing:
 3. Check the GitHub CLI with `gh --version`. If it's missing, install it (Windows: winget install GitHub.cli, macOS: brew install gh, Linux: https://cli.github.com). If this terminal can't find it after installing, use its full path.
 4. Check `gh auth status`. If I'm not signed in, ask me to run this in my own terminal, and wait until I say it's done:
    gh auth login --web --git-protocol https --scopes workflow
-5. If this folder isn't on GitHub yet (no github.com "origin" remote), ask me: public repo (renders free, no limit) or private (2,000 free minutes a month)? Then run git init -b main if needed, commit everything, and create and push the repo with:
-   gh repo create &lt;folder-name&gt; --public (or --private) --source . --push
-6. Run: npx github:Razee4315/coldframe setup
-   It adds the render workflow and Claude Code skills, then commits and pushes them. If it stops with an error, fix the cause and run it again.
+5. If this folder isn't on GitHub yet (no github.com "origin" remote), ask me: public repo (renders free, no limit) or private (2,000 free minutes a month)?
+6. Run: npx github:Razee4315/coldframe setup --public (or --private, from my answer in step 5; leave it off if the project is already on GitHub)
+   It creates the GitHub repo if needed (with a .gitignore, so node_modules is never uploaded), adds the render workflow and Claude Code skills, then commits and pushes. If it stops with an error, fix the cause and run it again.
 7. List my compositions with npx remotion compositions and show me their ids. Ask me before rendering, then render the one I pick with:
    npx github:Razee4315/coldframe render &lt;CompositionId&gt;
    The MP4 is saved in out/cloud/.
