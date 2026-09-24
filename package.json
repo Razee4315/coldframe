@@ -1,7 +1,7 @@
 {
   "name": "coldframe",
   "version": "1.0.0",
-  "description": "Render Remotion videos on free cloud machines: parallel GitHub Actions renders, delivery to Google Drive, Claude Code skills for making the videos.",
+  "description": "Render Remotion videos on free cloud machines: parallel GitHub Actions renders, every frame checked, Claude Code skills for making the videos.",
   "type": "module",
   "bin": { "coldframe": "bin/coldframe.mjs" },
   "files": ["bin", "templates", ".claude/skills", "sfx"],

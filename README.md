@@ -12,7 +12,6 @@
 <p align="center">
   <a href="https://razee4315.github.io/coldframe/">Website</a> ·
   <a href="#setup">Setup</a> ·
-  <a href="#google-drive-optional">Google Drive</a> ·
   <a href="#video-rules">Video rules</a> ·
   <a href="#faq">FAQ</a>
 </p>
@@ -30,7 +29,7 @@ Rendering a [Remotion](https://www.remotion.dev) video ties up your computer: fa
 
 1. **Split:** your video is cut into equal pieces.
 2. **Render:** up to 20 GitHub machines each render one piece, all at the same time.
-3. **Stitch:** the pieces are joined without re-encoding, every frame is counted, and the MP4 comes back to your computer (and to Google Drive, if you want).
+3. **Stitch:** the pieces are joined without re-encoding, every frame is counted, and the MP4 comes back to your computer.
 
 The [launch film](docs/media/launch-film.mp4) above and the [20 s demo](docs/media/demo.mp4) are Remotion projects in [`example/`](example), rendered by coldframe on GitHub machines (12 and 8).
 
@@ -58,7 +57,6 @@ npx github:Razee4315/coldframe setup
 - signs you in to GitHub (you paste a code in your browser)
 - puts your project on GitHub if it isn't there yet
 - adds the render workflow and the Claude Code skills
-- optionally connects Google Drive
 
 **3. Render.** Use the `id` of your Remotion `<Composition>`. The MP4 lands in `out/cloud/`.
 
@@ -66,25 +64,18 @@ npx github:Razee4315/coldframe setup
 npx github:Razee4315/coldframe render MyVideo
 ```
 
-That's it. The cloud renders what's **pushed** to GitHub, and coldframe warns you if you have unpushed changes.
+That's it. The cloud renders what's **pushed** to GitHub; if you have local commits, coldframe offers to push them first.
 
-## Google Drive (optional)
+Closed the terminal, or used `--no-wait`? The render keeps going in the cloud. Fetch it when it's done:
 
-Save every render to `My Drive/coldframe/`. No password or key is copied anywhere: you sign in to Google in your browser.
-
-1. Install rclone, the tool that uploads to Drive: `winget install Rclone.Rclone` (Windows) or `brew install rclone` (macOS).
-2. In your project folder, run:
-   ```bash
-   npx github:Razee4315/coldframe drive
-   ```
-3. A Google page opens. Pick your account and click **Allow**.
-
-coldframe asks only for access to files it creates itself (Google's `drive.file` permission), not the rest of your Drive. The sign-in is saved as a secret in your GitHub repo.
+```bash
+npx github:Razee4315/coldframe download
+```
 
 
 ## Video rules
 
-Setup adds three skills to your project, so Claude Code follows them whenever it makes a video:
+Setup adds these skills to your project (next to the `coldframe` skill that tells Claude Code how to render), so Claude Code follows them whenever it makes a video:
 
 - [video-rules](.claude/skills/video-rules/SKILL.md): story structure, the "AI look" to avoid, text, UI, data, CTA, length and formats.
 - [motion-direction](.claude/skills/motion-direction/SKILL.md): how to direct and build real motion design in Remotion: a virtual camera, depth planes, match cuts and palette impacts, and a workflow of three directions → beat sheet → approved styleframes before anything is animated.
@@ -121,19 +112,19 @@ Each machine spends about 40 s getting ready, so **short videos are still quicke
 ```text
 coldframe setup                     one-time setup in your Remotion project (start here)
 coldframe render <Comp> [options]   render in the cloud, wait, download the MP4
-coldframe drive                     also save every render to Google Drive
+coldframe download [run-id]         download the MP4 of a finished render (default: the latest)
 coldframe runs                      list recent cloud renders
 coldframe init                      only add the GitHub workflow file
 
   --chunks <n>      parallel machines (default 8, max 20)
   --props <json>    input props
-  --ref <branch>    git ref to render (default: current branch)
+  --ref <branch>    git branch to render (default: current branch)
   --out <dir>       where to save the MP4 (default out/cloud)
   --name <file>     output file name
   --no-wait         start the render and exit
 ```
 
-You can also start a render from your repo's **Actions** tab → **coldframe** → **Run workflow**.
+Press Ctrl+C while it waits and the render keeps going; `coldframe download` fetches it later. You can also start a render from your repo's **Actions** tab → **coldframe** → **Run workflow**.
 
 ## Workflow inputs
 
@@ -150,7 +141,7 @@ You can also start a render from your repo's **Actions** tab → **coldframe** �
 | `frame-timeout` | `120000` | Milliseconds one frame may take (heavy 3D needs more than Remotion's default) |
 | `concurrency` | `100%` | Remotion `--concurrency` on each machine |
 | `extra-args` | | Extra flags for every `remotion render`, e.g. `--crf=16` |
-| `drive-folder` | `gdrive:coldframe` | Where renders go in Drive, when Drive is connected |
+| `chunk-timeout` | `60` | Minutes one machine may render before it's stopped, so a stuck render can't use up your minutes |
 
 Your project needs a committed `package-lock.json`. coldframe adds the Linux binaries that npm often leaves out of lockfiles made on Windows or macOS ([npm/cli#4828](https://github.com/npm/cli/issues/4828)).
 
@@ -184,4 +175,4 @@ docs/                          the website (GitHub Pages)
 
 ## License
 
-[MIT](LICENSE). Not affiliated with Remotion, GitHub or Google.
+[MIT](LICENSE). Not affiliated with Remotion or GitHub.

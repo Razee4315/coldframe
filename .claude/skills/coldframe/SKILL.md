@@ -5,7 +5,7 @@ description: Render a Remotion video in the cloud on free GitHub machines instea
 
 # Cloud renders with coldframe
 
-coldframe renders Remotion compositions on GitHub Actions: the frames are split across up to 20 free machines that render in parallel, the pieces are stitched without re-encoding, every frame is counted, and the MP4 comes back to `out/cloud/` (and to Google Drive, if connected).
+coldframe renders Remotion compositions on GitHub Actions: the frames are split across up to 20 free machines that render in parallel, the pieces are stitched without re-encoding, every frame is counted, and the MP4 comes back to `out/cloud/`.
 
 Before designing or animating any video, follow the `video-rules`, `motion-direction` and `sound-design` skills.
 
@@ -16,14 +16,14 @@ Before designing or animating any video, follow the `video-rules`, `motion-direc
 
 ## Render
 
-Requirements: `npx github:Razee4315/coldframe setup` has been run once in the Remotion project (GitHub CLI, sign-in, repo, workflow, skills, optional Drive).
+Requirements: `npx github:Razee4315/coldframe setup` has been run once in the Remotion project (GitHub CLI, sign-in, repo, workflow, skills).
 
 1. Commit and push. The cloud renders what is on GitHub, not local edits. On slow uploads, push big media (music, footage) in separate commits.
 2. Run:
    ```bash
    npx github:Razee4315/coldframe render <CompositionId> --chunks 8
    ```
-   It starts the workflow, waits, and downloads the MP4 to `out/cloud/`. For long renders, use `--no-wait` and check with `gh run list --workflow coldframe.yml`, or run it in the background.
+   It starts the workflow, waits, and downloads the MP4 to `out/cloud/`. For long renders, use `--no-wait` (it prints the run id), then `npx github:Razee4315/coldframe download <run-id>` once `coldframe runs` shows it finished. If a render fails: `gh run view <run-id> --log-failed`.
 3. Verify every render before showing it:
    - frame count = composition duration (`ffprobe -count_packets`); the job summary says it matched
    - duration, resolution, fps, audio stream present
@@ -35,4 +35,4 @@ Chunks: about one machine per 5–10 s of video, max 20. Each machine spends ~40
 
 Useful inputs: `--props '<json>'`, `--name file.mp4`, `--ref <branch>`, `--chunks <n>`.
 WebGL / three.js renders with `--gl=swangle` on CPU runners (the workflow default). It works but is slow; render heavy 3D shots once on a local GPU and use them as clips.
-If the `RCLONE_CONF` repo secret is set, the MP4 is also copied to Google Drive (`gdrive:coldframe/`).
+A stuck machine is stopped after `chunk-timeout` minutes (default 60); raise it in `.github/workflows/coldframe.yml` for very long 3D renders.

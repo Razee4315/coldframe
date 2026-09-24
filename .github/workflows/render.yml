@@ -4,15 +4,13 @@
 # chunk   renders one frame range per runner, all in parallel: video plus a
 #         lossless PCM slice of the audio, so the joins are sample-exact
 # stitch  joins the chunks without re-encoding the video, encodes the audio
-#         once, verifies the frame count, uploads the MP4 as an artifact and
-#         (optionally) to Google Drive
+#         once, verifies the frame count and uploads the MP4 as an artifact
 #
 # Call it from any Remotion repo:
 #   jobs:
 #     render:
-#       uses: Razee4315/coldframe/.github/workflows/render.yml@main
+#       uses: Razee4315/coldframe/.github/workflows/render.yml@v1
 #       with: { composition: MyComp, chunks: 8 }
-#       secrets: inherit
 
 name: coldframe render
 
@@ -63,17 +61,13 @@ on:
         description: Never make a chunk shorter than this
         type: number
         default: 60
-      drive-folder:
-        description: rclone destination (remote:path). Used only when the RCLONE_CONF secret is set
-        type: string
-        default: "gdrive:coldframe"
+      chunk-timeout:
+        description: Minutes one machine may render before it is stopped (GitHub's default is 6 hours)
+        type: number
+        default: 60
       node-version:
         type: string
         default: "22"
-    secrets:
-      RCLONE_CONF:
-        description: Contents of an rclone.conf with a Google Drive remote (optional)
-        required: false
     outputs:
       artifact:
         description: Name of the artifact holding the final MP4
@@ -81,6 +75,10 @@ on:
 
 env:
   FORCE_COLOR: "0"
+
+# Reads the repo, nothing else. No secrets are used.
+permissions:
+  contents: read
 
 jobs:
   plan:
@@ -126,7 +124,9 @@ jobs:
           fix @remotion/renderer @remotion/compositor-linux-x64-gnu
       - name: Bundle
         working-directory: ${{ inputs.project-dir }}
-        run: npx remotion bundle ${{ inputs.entry-point }} --out-dir=coldframe-bundle
+        env:
+          ENTRY: ${{ inputs.entry-point }}
+        run: npx remotion bundle $ENTRY --out-dir=coldframe-bundle
       - name: Split frames
         id: plan
         working-directory: ${{ inputs.project-dir }}
@@ -181,6 +181,7 @@ jobs:
     name: Chunk ${{ matrix.index }} (${{ matrix.start }}-${{ matrix.end }})
     needs: plan
     runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.chunk-timeout }}
     strategy:
       fail-fast: true
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
@@ -208,14 +209,18 @@ jobs:
           PROPS: ${{ inputs.props }}
           RANGE: ${{ matrix.start }}-${{ matrix.end }}
           INDEX: ${{ matrix.index }}
+          GL: ${{ inputs.gl }}
+          CONCURRENCY: ${{ inputs.concurrency }}
+          FRAME_TIMEOUT: ${{ inputs.frame-timeout }}
+          EXTRA_ARGS: ${{ inputs.extra-args }}
         run: |
           mkdir -p coldframe-out
           # Matroska + 16-bit PCM: each chunk carries its exact slice of the
           # soundtrack, and PCM slices join sample-exactly (no clicks, no gaps).
+          # $EXTRA_ARGS is unquoted on purpose so "--crf=16 --scale=0.5" becomes two flags.
           npx remotion render coldframe-bundle "$COMPOSITION" "coldframe-out/chunk-$INDEX.mkv" \
             --codec=h264-mkv --audio-codec=pcm-16 --frames="$RANGE" --props="$PROPS" \
-            --gl=${{ inputs.gl }} --concurrency=${{ inputs.concurrency }} \
-            --timeout=${{ inputs.frame-timeout }} ${{ inputs.extra-args }}
+            --gl="$GL" --concurrency="$CONCURRENCY" --timeout="$FRAME_TIMEOUT" $EXTRA_ARGS
       - uses: actions/upload-artifact@v7
         with:
           name: coldframe-part-${{ matrix.index }}
@@ -234,8 +239,11 @@ jobs:
         env:
           OUT: ${{ inputs.output-name }}
           COMP: ${{ inputs.composition }}
+          RUN: ${{ github.run_number }}
         run: |
-          file="${OUT:-$COMP-${{ github.run_number }}.mp4}"
+          file="${OUT:-$COMP-$RUN}"
+          # Artifact names can't contain these characters, and the file always ends in .mp4.
+          file="$(printf '%s' "${file%.mp4}" | tr '/\\:*?"<>|' '_').mp4"
           echo "file=$file" >> "$GITHUB_OUTPUT"
           echo "artifact=${file%.mp4}" >> "$GITHUB_OUTPUT"
       # Remotion ships its own ffmpeg/ffprobe; installing the project (cached) is
@@ -281,24 +289,6 @@ jobs:
           name: ${{ steps.name.outputs.artifact }}
           path: final/${{ steps.name.outputs.file }}
           compression-level: 0
-      - name: Upload to Google Drive
-        id: drive
-        env:
-          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
-          DEST: ${{ inputs.drive-folder }}
-          FILE: ${{ steps.name.outputs.file }}
-        # A Drive problem must never cost you the render: the MP4 is already an artifact.
-        run: |
-          if [ -z "$RCLONE_CONF" ]; then echo "No RCLONE_CONF secret, skipping Drive."; echo "dest=" >> "$GITHUB_OUTPUT"; exit 0; fi
-          curl -fsSL -o rclone.zip https://downloads.rclone.org/rclone-current-linux-amd64.zip
-          unzip -q -j rclone.zip '*/rclone' -d "$RUNNER_TEMP/rclone" && export PATH="$RUNNER_TEMP/rclone:$PATH"
-          mkdir -p ~/.config/rclone && printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
-          if rclone copyto "final/$FILE" "$DEST/$FILE" --stats-one-line -v; then
-            echo "dest=$DEST/$FILE" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::Google Drive upload failed. The MP4 is still attached to this run. Run 'coldframe drive' again to reconnect Drive."
-            echo "dest=failed (see warning)" >> "$GITHUB_OUTPUT"
-          fi
       - name: Summary
         env:
           FILE: ${{ steps.name.outputs.file }}
@@ -307,7 +297,8 @@ jobs:
           FPS: ${{ needs.plan.outputs.fps }}
           SIZE: ${{ needs.plan.outputs.size }}
           MATRIX: ${{ needs.plan.outputs.matrix }}
-          DRIVE: ${{ steps.drive.outputs.dest }}
+          COMP: ${{ inputs.composition }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           secs=$(( $(date +%s) - STARTED ))
           chunks=$(echo "$MATRIX" | jq '.include | length')
@@ -317,11 +308,12 @@ jobs:
             echo
             echo "| | |"
             echo "|---|---|"
-            echo "| Composition | \`${{ inputs.composition }}\` ($SIZE, $FPS fps) |"
+            echo "| Composition | \`$COMP\` ($SIZE, $FPS fps) |"
             echo "| Frames | $TOTAL ($(awk "BEGIN{printf \"%.1f\", $TOTAL/$FPS}") s of video) |"
             echo "| Machines | $chunks in parallel |"
             echo "| Wall time | $((secs/60)) min $((secs%60)) s |"
             echo "| Output | \`$FILE\` ($mb MB), artifact \`${FILE%.mp4}\` |"
-            [ -n "$DRIVE" ] && echo "| Google Drive | \`$DRIVE\` |"
+            echo
+            echo "Download: \`npx github:Razee4315/coldframe download $RUN_ID\`, or **Artifacts** below."
           } >> "$GITHUB_STEP_SUMMARY"
           cat "$GITHUB_STEP_SUMMARY"

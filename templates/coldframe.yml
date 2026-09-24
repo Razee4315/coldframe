@@ -1,6 +1,6 @@
 # Render this Remotion project in the cloud with coldframe.
 # Start it from the Actions tab ("Run workflow") or with: coldframe render <CompositionId>
-# Optional secret RCLONE_CONF (an rclone.conf with a Google Drive remote) also saves the MP4 to Drive.
+# The MP4 is attached to the run; `coldframe render` downloads it to out/cloud/.
 
 name: coldframe
 
@@ -30,5 +30,4 @@ jobs:
       output-name: ${{ inputs.output-name }}
       # project-dir: .        # folder with package.json, if not the repo root
       # gl: swangle           # WebGL on CPU runners; "angle" or "egl" if you know better
-      # drive-folder: gdrive:coldframe
-    secrets: inherit
+      # chunk-timeout: 60     # minutes before a stuck machine is stopped

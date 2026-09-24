@@ -4,18 +4,17 @@
 //
 //   coldframe setup                     one-time setup in your Remotion project (start here)
 //   coldframe render <Comp> [options]   render in the cloud, wait, download the MP4
-//   coldframe drive                     also save every render to Google Drive
-//                                     (--client-id/--client-secret: your own Google OAuth app)
+//   coldframe download [run-id]         download the MP4 of a finished render (default: the latest)
 //   coldframe runs                      list recent cloud renders
 //   coldframe init                      only add the GitHub workflow file
 //
 // render options:
 //   --chunks <n>      parallel machines (default 8, max 20)
 //   --props <json>    input props
-//   --ref <branch>    git ref to render (default: current branch)
+//   --ref <branch>    git branch to render (default: current branch)
 //   --out <dir>       where to save the MP4 (default out/cloud)
 //   --name <file>     output file name
-//   --no-wait         start the render and exit
+//   --no-wait         start the render and exit (fetch it later with `coldframe download`)
 //   --repo <o/r>      GitHub repo (default: the repo in this folder)
 
 import { spawnSync } from "node:child_process";
@@ -25,7 +24,8 @@ import readline from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 
 const WORKFLOW = "coldframe.yml";
-const PKG = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const SELF = fileURLToPath(import.meta.url);
+const PKG = path.join(path.dirname(SELF), "..");
 const isWin = process.platform === "win32";
 
 /**
@@ -38,15 +38,7 @@ function locate(name) {
   const local = process.env.LOCALAPPDATA || "";
   const candidates = {
     gh: [path.join(process.env.ProgramFiles || "C:\\Program Files", "GitHub CLI", "gh.exe"), path.join(local, "Programs", "GitHub CLI", "gh.exe")],
-    rclone: [path.join(local, "Microsoft", "WinGet", "Links", "rclone.exe")],
   }[name] || [];
-  // winget unpacks rclone to Packages\Rclone.Rclone_*\rclone-vX-windows-amd64\rclone.exe
-  const pkgs = path.join(local, "Microsoft", "WinGet", "Packages");
-  if (name === "rclone" && fs.existsSync(pkgs)) {
-    for (const d of fs.readdirSync(pkgs).filter((d) => d.startsWith("Rclone.Rclone"))) {
-      for (const sub of fs.readdirSync(path.join(pkgs, d))) candidates.push(path.join(pkgs, d, sub, "rclone.exe"));
-    }
-  }
   return candidates.find((c) => fs.existsSync(c)) || null;
 }
 const tools = {};
@@ -54,7 +46,6 @@ const tool = (name) => (name in tools ? tools[name] : (tools[name] = locate(name
 
 const run = (cmd, args, opts = {}) =>
   spawnSync(tool(cmd) || cmd, args, { encoding: "utf8", stdio: opts.inherit ? "inherit" : "pipe", input: opts.input, shell: false });
-const has = (cmd) => Boolean(tool(cmd));
 const gh = (args, opts = {}) => {
   const r = run("gh", args, opts);
   if (r.error) die(`the GitHub CLI (gh) isn't installed. Install it with:
@@ -80,12 +71,19 @@ async function ask(question, fallback = "n") {
   return a || fallback;
 }
 
+/** --flag value, --flag=value, --no-flag; a flag with no value is `true`. */
 function parse(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a.startsWith("--no-")) out[a.slice(5)] = false;
-    else if (a.startsWith("--")) out[a.slice(2)] = argv[++i];
+    else if (a.startsWith("--")) {
+      const [k, v] = a.slice(2).split(/=(.*)/s);
+      if (v !== undefined) out[k] = v;
+      else if (i + 1 < argv.length && !argv[i + 1].startsWith("--")) out[k] = argv[++i];
+      else out[k] = true;
+    } else if (a === "-h") out.help = true;
+    else if (a === "-v") out.version = true;
     else out._.push(a);
   }
   return out;
@@ -126,7 +124,22 @@ const repoOrDie = () =>
   die(`this folder isn't connected to a GitHub repo (git has no "origin" pointing at github.com).
   Run \`npx github:Razee4315/coldframe setup\` first.`);
 
+/** The repo to act on: --repo, or this folder's; signs in to GitHub if needed. */
+function targetRepo(opts) {
+  if (!opts.repo) requireProject();
+  const repo = opts.repo || repoOrDie();
+  ensureGitHub();
+  return repo;
+}
+
 /* ---------------- setup ---------------- */
+
+const GITIGNORE = `node_modules/
+out/
+build/
+.env
+.DS_Store
+`;
 
 async function setup() {
   requireProject();
@@ -139,7 +152,8 @@ async function setup() {
   step(2, "Remotion project");
   if (!fs.existsSync("package.json")) die("no package.json here. Run this in your Remotion project folder.");
   const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-  if (!{ ...pkg.dependencies, ...pkg.devDependencies }.remotion) console.log("  ! remotion isn't in package.json. Is this the right folder?");
+  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+  if (!deps.remotion) console.log("  ! remotion isn't in package.json. Is this the right folder?");
   if (!fs.existsSync("package-lock.json")) die("no package-lock.json. Run `npm install` once, then run this again.");
   ok("package.json and package-lock.json found");
 
@@ -155,6 +169,11 @@ async function setup() {
   Public repos render for free with no limit. Private repos get 2,000 free minutes a month.`);
     const vis = await ask(`Create it as "${name}"? [public/private/no]`, "no");
     if (!vis.startsWith("pub") && !vis.startsWith("pri")) die("stopped. Push this project to GitHub, then run setup again.");
+    // Never upload node_modules or renders: they are huge and the cloud installs its own.
+    if (!fs.existsSync(".gitignore")) {
+      fs.writeFileSync(".gitignore", GITIGNORE);
+      ok("added .gitignore (node_modules, out, build)");
+    }
     run("git", ["add", "-A"]);
     run("git", ["commit", "-qm", "Initial commit"]);
     gh(["repo", "create", name, vis.startsWith("pub") ? "--public" : "--private", "--source", ".", "--push"], { inherit: true });
@@ -164,26 +183,23 @@ async function setup() {
 
   step(4, "Cloud render workflow and Claude Code files");
   addFile(path.join("templates", WORKFLOW), path.join(".github", "workflows", WORKFLOW));
-  addFile(path.join(".claude", "skills", "coldframe", "SKILL.md"));
-  addFile(path.join(".claude", "skills", "video-rules", "SKILL.md"));
-  addFile(path.join(".claude", "skills", "motion-direction", "SKILL.md"));
-  addFile(path.join(".claude", "skills", "sound-design", "SKILL.md"));
+  for (const skill of ["coldframe", "video-rules", "motion-direction", "sound-design"]) addFile(path.join(".claude", "skills", skill, "SKILL.md"));
   // Sound-effect library (CC0) + Remotion helpers (<Sfx>, <MusicBed>), used by the sound-design skill.
   for (const f of fs.readdirSync(path.join(PKG, "sfx"))) addFile(path.join("sfx", f), path.join("public", "sfx", f));
-  if (fs.existsSync("src")) addFile(path.join("templates", "sound.tsx"), path.join("src", "coldframe-sound.tsx"));
+  const soundFile = path.join("src", "coldframe-sound.tsx");
+  if (fs.existsSync("src")) {
+    addFile(path.join("templates", "sound.tsx"), soundFile);
+    if (!deps["@remotion/media"]) console.log("  ! the sound helpers need @remotion/media: run `npx remotion add @remotion/media` before using them.");
+  }
 
-  step(5, "Google Drive (optional)");
-  if ((await ask("Also save every render to your Google Drive? [y/N]", "n")).startsWith("y")) await drive({ repo });
-  else console.log("  Skipped. Run `coldframe drive` any time to add it.");
-
-  step(6, "Push");
-  run("git", ["add", ".github", ".claude", path.join("public", "sfx"), ...(fs.existsSync(path.join("src", "coldframe-sound.tsx")) ? [path.join("src", "coldframe-sound.tsx")] : [])]);
+  step(5, "Push");
+  run("git", ["add", ".github", ".claude", path.join("public", "sfx"), ...(fs.existsSync(soundFile) ? [soundFile] : [])]);
   if (run("git", ["diff", "--cached", "--quiet"]).status !== 0) {
     run("git", ["commit", "-qm", "Add coldframe"]);
-    const p = run("git", ["push"], { inherit: true });
+    const p = run("git", ["push", "-u", "origin", "HEAD"], { inherit: true });
     if (p.status !== 0) die("push failed. Run `git push`, then render.");
-  }
-  ok("pushed");
+    ok("pushed");
+  } else ok("nothing new to push");
 
   console.log(`\nDone. Render a composition in the cloud with:
     npx github:Razee4315/coldframe render <CompositionId>
@@ -198,103 +214,114 @@ function addFile(from, to = from) {
   ok(`added ${to}`);
 }
 
-/* ---------------- drive ---------------- */
-
-async function drive(opts = {}) {
-  if (!opts.repo) requireProject();
-  const repo = opts.repo || repoOrDie();
-  ensureGitHub();
-  if (!has("rclone")) {
-    console.log(`  Google Drive uploads use rclone. Install it, open a new terminal, and run \`coldframe drive\`:
-    ${isWin ? "winget install Rclone.Rclone" : process.platform === "darwin" ? "brew install rclone" : "see https://rclone.org/install/"}`);
-    return;
-  }
-  // coldframe keeps its own remote so it never uses or changes remotes you already have.
-  const remote = "coldframe";
-  const works = () => run("rclone", ["lsd", `${remote}:`, "--max-depth", "1"]).status === 0;
-  const remotes = (run("rclone", ["listremotes"]).stdout || "").split(/\r?\n/);
-  const fresh = opts["client-id"] !== undefined || !remotes.includes(`${remote}:`) || !works();
-  if (fresh) {
-    if (remotes.includes(`${remote}:`)) run("rclone", ["config", "delete", remote]);
-    console.log("  A Google sign-in page opens in your browser. Pick your account and click Allow.");
-    console.log("  (coldframe only asks for access to files it creates itself, not your whole Drive.)");
-    const args = ["config", "create", remote, "drive", "scope=drive.file"];
-    if (opts["client-id"]) args.push(`client_id=${opts["client-id"]}`, `client_secret=${opts["client-secret"] || ""}`);
-    // rclone prints the finished config, including the sign-in token, to stdout: never show it.
-    const r = spawnSync(tool("rclone"), args, { stdio: ["inherit", "ignore", "inherit"] });
-    if (r.status !== 0) die("Google sign-in didn't finish. Run `coldframe drive` again.");
-  }
-  if (!works()) die("Drive sign-in saved, but a test upload check failed. Run `coldframe drive` again.");
-  ok("Google Drive works from this computer");
-
-  // Save only coldframe's section as a repo secret, renamed to the workflow's default remote (gdrive:).
-  const file = (run("rclone", ["config", "file"]).stdout || "").trim().split(/\r?\n/).pop();
-  const conf = fs.readFileSync(file, "utf8");
-  const section = conf.match(new RegExp(`\\[${remote}\\][\\s\\S]*?(?=\\r?\\n\\[|$)`))?.[0];
-  if (!section || !/^token\s*=/m.test(section)) die(`couldn't read a signed-in ${remote} remote from ${file}.`);
-  gh(["secret", "set", "RCLONE_CONF", "--repo", repo], { input: section.trim().replace(`[${remote}]`, "[gdrive]") + "\n" });
-  ok(`Drive connected. Renders from ${repo} will also appear in My Drive/coldframe/`);
-}
-
 /* ---------------- render ---------------- */
+
+/** The cloud renders what's on GitHub: stop if the branch isn't there, offer to push local commits. */
+async function checkPushed(ref) {
+  if (run("git", ["rev-parse", "--verify", "-q", `origin/${ref}`]).status !== 0) {
+    die(`branch "${ref}" isn't on GitHub yet, so the cloud can't render it. Push it first:
+    git push -u origin ${ref}`);
+  }
+  const ahead = Number(git(["rev-list", "--count", `origin/${ref}..HEAD`])) || 0;
+  if (ahead) {
+    const yes = process.stdin.isTTY && !(await ask(`${ahead} local commit(s) aren't on GitHub yet. Push them now? [Y/n]`, "y")).startsWith("n");
+    if (yes) {
+      if (run("git", ["push", "origin", `HEAD:${ref}`], { inherit: true }).status !== 0) die("push failed. Run `git push`, then render again.");
+    } else console.warn(`! ${ahead} local commit(s) not pushed; the cloud renders origin/${ref}.`);
+  }
+  if (git(["status", "--porcelain", "--untracked-files=no"])) console.warn("! Uncommitted changes are not included in the cloud render.");
+}
 
 async function render(opts) {
   const comp = opts._[1];
   if (!comp) die("usage: coldframe render <CompositionId> [--chunks 8]");
-  if (!opts.repo) requireProject();
-  const repo = opts.repo || repoOrDie();
-  ensureGitHub();
-  const ref = opts.ref || git(["rev-parse", "--abbrev-ref", "HEAD"]) || "main";
+  const chunks = opts.chunks === undefined ? 8 : Number(opts.chunks);
+  if (!Number.isInteger(chunks) || chunks < 1 || chunks > 20) die("--chunks must be a whole number from 1 to 20.");
+  if (opts.props !== undefined) {
+    try {
+      JSON.parse(opts.props);
+    } catch {
+      die(`--props must be JSON, for example: --props '{"title":"Hello"}'`);
+    }
+  }
+  const repo = targetRepo(opts);
 
-  const unpushed = git(["log", "--oneline", `origin/${ref}..HEAD`]);
-  if (unpushed) console.warn(`! ${unpushed.split("\n").length} local commit(s) not pushed; the cloud renders origin/${ref}.`);
-  if (git(["status", "--porcelain"])) console.warn("! Uncommitted changes are not included in the cloud render.");
+  let ref = typeof opts.ref === "string" ? opts.ref : git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  if (ref === "HEAD") die("this checkout isn't on a branch. Switch to one, or pass --ref <branch>.");
+  ref ||= "main";
+  if (!opts.repo && !opts.ref) await checkPushed(ref);
 
-  const fields = ["-f", `composition=${comp}`, "-f", `chunks=${opts.chunks ?? 8}`];
+  const fields = ["-f", `composition=${comp}`, "-f", `chunks=${chunks}`];
   if (opts.props) fields.push("-f", `props=${opts.props}`);
   if (opts.name) fields.push("-f", `output-name=${opts.name}`);
 
-  const since = new Date(Date.now() - 5000).toISOString();
+  // Remember the runs that already exist, so the new one is found without trusting clocks.
+  const listRuns = () =>
+    JSON.parse(gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--event", "workflow_dispatch", "--limit", "10", "--json", "databaseId,headBranch,url"]));
+  const before = new Set(listRuns().map((r) => r.databaseId));
+  const t0 = Date.now();
   gh(["workflow", "run", WORKFLOW, "--repo", repo, "--ref", ref, ...fields]);
-  console.log(`Started ${comp} on ${repo}@${ref} across ${opts.chunks ?? 8} machines.`);
+  console.log(`Started ${comp} on ${repo}@${ref} across up to ${chunks} machines.`);
 
   let found;
   for (let i = 0; i < 30 && !found; i++) {
     await sleep(2000);
-    const runs = JSON.parse(
-      gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--event", "workflow_dispatch", "--limit", "5",
-        "--json", "databaseId,createdAt,url"]),
-    );
-    found = runs.find((r) => r.createdAt >= since);
+    found = listRuns().find((r) => !before.has(r.databaseId) && r.headBranch === ref);
   }
   if (!found) die("render started, but the run did not show up yet. Check `coldframe runs`.");
+  const id = String(found.databaseId);
   console.log(found.url);
-  if (opts.wait === false) return;
+  if (opts.wait === false) return console.log(`When it's done: coldframe download ${id}`);
 
-  const t0 = Date.now();
-  gh(["run", "watch", String(found.databaseId), "--repo", repo, "--exit-status", "--interval", "10"], { inherit: true, allowFail: true });
-  const info = JSON.parse(gh(["run", "view", String(found.databaseId), "--repo", repo, "--json", "conclusion"]));
-  if (info.conclusion !== "success") die(`render ${info.conclusion}. Logs: ${found.url}`);
+  // Ctrl+C stops waiting, not the render.
+  process.on("SIGINT", () => {});
+  gh(["run", "watch", id, "--repo", repo, "--exit-status", "--interval", "10"], { inherit: true, allowFail: true });
+  const info = JSON.parse(gh(["run", "view", id, "--repo", repo, "--json", "status,conclusion"]));
+  if (info.status !== "completed") {
+    console.log(`\nStopped waiting. The render keeps going in the cloud. Get the MP4 later with:
+    coldframe download ${id}`);
+    process.exit(0);
+  }
+  if (info.conclusion !== "success") die(`render ${info.conclusion}. See what went wrong with:
+    gh run view ${id} --repo ${repo} --log-failed
+  or open ${found.url}`);
 
-  const dir = path.resolve(opts.out || "out/cloud");
-  fs.mkdirSync(dir, { recursive: true });
-  const artifacts = JSON.parse(gh(["api", `repos/${repo}/actions/runs/${found.databaseId}/artifacts`, "--paginate"])).artifacts
-    .map((a) => a.name)
+  const saved = saveRender(repo, id, opts.out);
+  const mins = ((Date.now() - t0) / 60000).toFixed(1);
+  console.log(`Done in ${mins} min. Saved ${saved.join(", ")}`);
+}
+
+/** Download the final MP4(s) of a run into `out` (default out/cloud); returns the saved paths. */
+function saveRender(repo, id, out = "out/cloud") {
+  const names = gh(["api", `repos/${repo}/actions/runs/${id}/artifacts?per_page=100`, "--jq", ".artifacts[] | select(.expired | not) | .name"])
+    .split(/\r?\n/)
+    .filter(Boolean)
     // Skip only the workflow's own temporary artifacts, never a render the user named "coldframe-…".
     .filter((n) => n !== "coldframe-bundle" && !n.startsWith("coldframe-part-"));
+  if (!names.length) die(`run ${id} has no MP4 to download: it failed, is still running, or its files expired.`);
+  const dir = path.resolve(out);
+  fs.mkdirSync(dir, { recursive: true });
   // gh refuses to overwrite, so download next to the target and move files in.
-  const tmp = path.join(dir, `.coldframe-${found.databaseId}`);
+  const tmp = path.join(dir, `.coldframe-${id}`);
   const saved = [];
-  for (const name of artifacts) {
-    gh(["run", "download", String(found.databaseId), "--repo", repo, "-n", name, "-D", tmp]);
+  for (const name of names) {
+    gh(["run", "download", id, "--repo", repo, "-n", name, "-D", tmp]);
     for (const f of fs.readdirSync(tmp)) {
       fs.renameSync(path.join(tmp, f), path.join(dir, f));
-      saved.push(path.join(dir, f));
+      saved.push(path.relative(".", path.join(dir, f)));
     }
   }
   fs.rmSync(tmp, { recursive: true, force: true });
-  const mins = ((Date.now() - t0) / 60000).toFixed(1);
-  console.log(`Done in ${mins} min. Saved ${saved.map((f) => path.relative(".", f)).join(", ")}`);
+  return saved;
+}
+
+function download(opts) {
+  const repo = targetRepo(opts);
+  const id =
+    opts._[1] ||
+    gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--status", "success", "--limit", "1", "--json", "databaseId", "--jq", ".[0].databaseId"]) ||
+    die("no finished renders yet. Start one with `coldframe render <CompositionId>`.");
+  console.log(`Saved ${saveRender(repo, String(id), opts.out).join(", ")}`);
 }
 
 function init() {
@@ -304,20 +331,26 @@ function init() {
 }
 
 function runs(opts) {
-  if (!opts.repo) requireProject();
-  const repo = opts.repo || repoOrDie();
-  ensureGitHub();
-  gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--limit", "10"], { inherit: true });
+  gh(["run", "list", "--repo", targetRepo(opts), "--workflow", WORKFLOW, "--limit", "10"], { inherit: true });
+}
+
+function help() {
+  const lines = fs.readFileSync(SELF, "utf8").split(/\r?\n/).slice(1);
+  console.log(lines.slice(0, lines.findIndex((l) => !l.startsWith("//"))).map((l) => l.replace(/^\/\/ ?/, "")).join("\n"));
 }
 
 const opts = parse(process.argv.slice(2));
 const cmd = opts._[0];
-if (cmd === "setup") await setup();
+for (const k of ["chunks", "props", "ref", "out", "name", "repo"]) if (opts[k] === true) die(`--${k} needs a value.`);
+if (opts.version) console.log(JSON.parse(fs.readFileSync(path.join(PKG, "package.json"), "utf8")).version);
+else if (opts.help || cmd === "help") help();
+else if (cmd === "setup") await setup();
 else if (cmd === "render") await render(opts);
-else if (cmd === "drive") await drive(opts);
+else if (cmd === "download") download(opts);
 else if (cmd === "init") init();
 else if (cmd === "runs") runs(opts);
 else {
-  console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 19).map((l) => l.replace(/^\/\/ ?/, "")).join("\n"));
+  if (cmd) console.error(`coldframe: unknown command "${cmd}"\n`);
+  help();
   process.exit(cmd ? 1 : 0);
 }

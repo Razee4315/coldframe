@@ -28,4 +28,3 @@ jobs:
       props: ${{ inputs.props }}
       output-name: ${{ inputs.output-name }}
       project-dir: example
-    secrets: inherit
