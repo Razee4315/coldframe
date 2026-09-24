@@ -1,5 +1,5 @@
 {
-  "_about": "Single config for the coldframe launch film: colours, text, facts and timings (frames at 30 fps). Read by src/launch/*.tsx and scripts/make_launch_soundtrack.py. Every number here comes from the real run below or the README.",
+  "_about": "Single config for the coldframe launch film: colours, text, facts and timings (frames at 30 fps). Read by src/launch/*.tsx. Every number here comes from the real run below or the README.",
   "fps": 30,
   "colors": {
     "frost": "#F3F6F7",
@@ -41,11 +41,9 @@
     "stitchLabel": "frames in the final MP4",
     "audio": ["Audio joins are ", "sample-exact."],
     "audioSource": "768,000 / 768,000 samples identical to a single-pass render",
-    "deliver": ["Back on your laptop. ", "And Drive."],
-    "deliverTall": ["Saved to your ", "Drive."],
+    "deliver": ["Back on your ", "laptop."],
     "file": "ColdframePromo.mp4",
     "laptopPath": "out/cloud/",
-    "drivePath": "My Drive / coldframe /",
     "proof": [
       { "line": ["", "Free", " on public repos."], "source": "Private repos: 2,000 free minutes a month." },
       { "line": ["Up to ", "20", " machines."], "source": "One piece of the video on each.", "grid": 20 },
@@ -71,7 +69,7 @@
         { "type": "split", "from": 600, "dur": 330, "textAt": 4, "splitAt": 8, "dropAt": 26, "planAt": 44, "fillAt": 58, "fillEnd": 270 },
         { "type": "stitch", "from": 930, "dur": 105, "textAt": 24, "joinAt": 0, "checkAt": 48 },
         { "type": "audio", "from": 1035, "dur": 90, "textAt": 16 },
-        { "type": "deliver", "from": 1125, "dur": 105, "textAt": 10, "dropA": 26, "dropB": 40 },
+        { "type": "deliver", "from": 1125, "dur": 105, "textAt": 10, "dropAt": 30 },
         { "type": "proof", "from": 1230, "dur": 68, "index": 0 },
         { "type": "proof", "from": 1298, "dur": 67, "index": 1 },
         { "type": "proof", "from": 1365, "dur": 68, "index": 2 },
@@ -89,7 +87,7 @@
         { "type": "command", "from": 300, "dur": 105, "textAt": 6, "typeAt": 14, "typeEnd": 44, "enterAt": 50, "collapseAt": 84 },
         { "type": "split", "from": 405, "dur": 180, "textAt": 4, "splitAt": 8, "dropAt": 22, "planAt": 36, "fillAt": 46, "fillEnd": 132 },
         { "type": "stitch", "from": 585, "dur": 90, "textAt": 18, "joinAt": 0, "checkAt": 40 },
-        { "type": "deliver", "from": 675, "dur": 75, "textAt": 6, "dropA": 20, "dropB": 30 },
+        { "type": "deliver", "from": 675, "dur": 75, "textAt": 6, "dropAt": 22 },
         { "type": "cta", "from": 750, "dur": 150, "wipe": true }
       ]
     },

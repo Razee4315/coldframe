@@ -1,6 +1,10 @@
 # coldframe demo project
 
-A 16-second, 1920x1080, 30 fps Remotion video (`ColdframePromo`) that coldframe renders in the cloud as its end-to-end test. The soundtrack is synthesised by `scripts/make_soundtrack.py`.
+Remotion compositions that coldframe renders in the cloud:
+
+- `ColdframePromo`: a 20-second, 1920x1080, 30 fps demo; the end-to-end test (its soundtrack checks that audio joins are sample-exact).
+- `LaunchFilm`, `LaunchFilmVertical`, `LaunchFilm15`, `LaunchThumb`: the launch film, all set in `src/launch/launch.json`.
+- `SfxAudition`: plays every sound in the `public/sfx/` library.
 
 ```bash
 npm install

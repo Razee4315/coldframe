@@ -445,7 +445,7 @@ export const AudioSeam: React.FC<{ s: { dur: number; textAt: number } }> = ({ s 
   );
 };
 
-/* 9. The MP4 lands on the laptop and in Drive ------------------------------------------ */
+/* 9. The MP4 lands back on the laptop ------------------------------------------------- */
 
 const FileCard: React.FC<{ r: Rect; content: number; done?: number }> = ({ r, content, done = 0 }) => (
   <div style={{ ...box(r), borderRadius: 12, background: interpolateColors(content, [0, 1], [C.cobalt, C.panel]), border: `1px solid ${C.line}`, overflow: "hidden" }}>
@@ -468,7 +468,7 @@ const Folder: React.FC<{ r: Rect; title: string; path: string; opacity: number }
   </div>
 );
 
-export const Deliver: React.FC<{ s: { dur: number; textAt: number; dropA: number; dropB: number } }> = ({ s }) => {
+export const Deliver: React.FC<{ s: { dur: number; textAt: number; dropAt: number } }> = ({ s }) => {
   const f = useCurrentFrame();
   const L = useLayout();
   const start: Rect = L.tall ? stitchStrip(L) : { x: L.padL, y: 600, w: L.contentW, h: 24 };
@@ -476,15 +476,12 @@ export const Deliver: React.FC<{ s: { dur: number; textAt: number; dropA: number
   const center: Rect = L.tall ? { x: L.padL, y: 600, w: L.contentW, h: 96 } : { x: 700, y: 340, w: 520, h: 96 };
   const card = lerpRect(shrink, start, center);
   const content = ease(f, 10, 20);
-  const panels: { r: Rect; title: string; path: string; at: number }[] = L.tall
-    ? [{ r: { x: L.padL, y: 820, w: L.contentW, h: 250 }, title: "Google Drive", path: T.drivePath, at: s.dropA }]
-    : [
-        { r: { x: L.padL, y: 540, w: 720, h: 250 }, title: "This laptop", path: T.laptopPath, at: s.dropA },
-        { r: { x: L.padL + 800, y: 540, w: 720, h: 250 }, title: "Google Drive", path: T.drivePath, at: s.dropB },
-      ];
+  const panels: { r: Rect; title: string; path: string; at: number }[] = [
+    { r: L.tall ? { x: L.padL, y: 820, w: L.contentW, h: 250 } : { x: L.padL, y: 540, w: L.contentW, h: 250 }, title: "This laptop", path: T.laptopPath, at: s.dropAt },
+  ];
   return (
     <AbsoluteFill>
-      <Headline at={s.textAt} parts={L.tall ? T.deliverTall : T.deliver} top={L.tall ? L.headTop : 170} />
+      <Headline at={s.textAt} parts={T.deliver} top={L.tall ? L.headTop : 170} />
       {panels.map((p) => (
         <Folder key={p.title} r={p.r} title={p.title} path={p.path} opacity={ease(f, 8, 20)} />
       ))}
