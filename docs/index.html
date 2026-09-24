@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>coldframe</title>
+<title>coldframe · Render Remotion videos in the cloud</title>
 <meta name="description" content="Render Remotion videos on free GitHub machines instead of your laptop. One setup command, parallel renders, every frame checked.">
 <meta property="og:title" content="coldframe: render Remotion videos in the cloud">
 <meta property="og:description" content="Your Remotion video renders on free GitHub machines in parallel, every frame is checked, and the MP4 comes back to you. Your laptop stays cold.">
@@ -29,7 +29,9 @@
     --bg: #F1F2EF; --bg-2: #E6E8E4; --surface: #F8F9F7;
     --ink: #0D0E0F; --ink-2: #56595C; --ink-3: #8B8F92;
     --line: rgba(13, 14, 15, 0.12); --line-2: rgba(13, 14, 15, 0.24);
-    --accent: #1F55E0; --ok: #1C8C5A;
+    --accent: #1F55E0; --ok: #1C8C5A; --card: #FFFFFF;
+    --cobalt: #1E4FD8; --cobalt-2: #1335A6; --sky: #1FA0DC; --ice: #9BE3F5; --ember: #FF6A3D;
+    --cloud: #DCEAF6; --film: #1A1D21; --film-2: #30353B; --tab: #FFFFFF;
     --code-bg: #0F1112; --code-ink: #E7E9E6; --code-dim: #7C8387;
     --panel: #0D0E0F; --panel-ink: #ECEDE9; --panel-2: #8E9295; --panel-line: rgba(236, 237, 233, 0.12);
     --sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -46,7 +48,7 @@
       --ink: #ECEDE9; --ink-2: #9A9EA1; --ink-3: #63676A;
       --line: rgba(236, 237, 233, 0.11); --line-2: rgba(236, 237, 233, 0.22);
       --accent: #7EA4FF; --ok: #58C08C;
-      --code-bg: #151719; --panel: #16181A;
+      --code-bg: #151719; --panel: #16181A; --card: #121416; --cobalt-2: #0F2B8A; --cloud: #132231; --film: #24282D; --film-2: #3A3F45; --tab: #2A2E33;
       color-scheme: dark;
     }
   }
@@ -55,20 +57,26 @@
     --ink: #ECEDE9; --ink-2: #9A9EA1; --ink-3: #63676A;
     --line: rgba(236, 237, 233, 0.11); --line-2: rgba(236, 237, 233, 0.22);
     --accent: #7EA4FF; --ok: #58C08C;
-    --code-bg: #151719; --panel: #16181A;
+    --code-bg: #151719; --panel: #16181A; --card: #121416; --cobalt-2: #0F2B8A; --cloud: #132231; --film: #24282D; --film-2: #3A3F45; --tab: #2A2E33;
     color-scheme: dark;
   }
 
   * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: clip; transition: background-color .5s, color .5s; }
+  html { scroll-behavior: smooth; scrollbar-color: var(--line-2) transparent; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: clip; }
   ::selection { background: var(--accent); color: var(--bg); }
   a { color: inherit; }
   code, pre { font-family: var(--mono); }
   h1, h2, h3 { margin: 0; font-weight: 500; }
+  h2, h3, .say, summary { text-wrap: balance; }
+  p, li { text-wrap: pretty; }
   em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
   .wrap { width: min(1280px, 100% - 2 * var(--gutter)); margin-inline: auto; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+  main a:not([class]), .foot-bottom a { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); transition: color .3s, text-decoration-color .3s; }
+  main a:not([class]):hover { color: var(--accent); text-decoration-color: currentColor; }
+  .foot-bottom a:hover { color: var(--ice); text-decoration-color: currentColor; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 
   /* nav */
   header.nav { position: fixed; inset: 0 0 auto; z-index: 30; border-bottom: 1px solid transparent; transition: transform .6s var(--ease), background-color .4s, border-color .4s; }
@@ -91,17 +99,43 @@
   :root[data-theme="dark"] #theme svg { transform: rotate(180deg); }
 
   /* hero */
-  .hero { min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; padding: 120px 0 56px; }
-  h1 { font-size: clamp(48px, 9.4vw, 146px); line-height: .93; letter-spacing: -0.058em; }
+  .hero-wrap { padding: 80px 12px 0; }
+  .hero { position: relative; overflow: clip; isolation: isolate; min-height: calc(100vh - 92px); min-height: calc(100svh - 92px); display: flex; flex-direction: column; justify-content: center; padding: 64px 0 56px; border-radius: 28px; background: radial-gradient(120% 90% at 85% 10%, #2E63EA 0%, transparent 60%), linear-gradient(165deg, var(--cobalt) 0%, var(--cobalt-2) 100%); color: #fff; }
+  .hero-in { position: relative; z-index: 1; display: flex; flex-direction: column; width: min(1280px, 100% - 2 * var(--gutter) + 24px); }
+  .shapes { position: absolute; z-index: 0; right: -10%; top: -18%; height: 136%; width: auto; aspect-ratio: 1; pointer-events: none; }
+  .shapes polygon { transform-box: fill-box; transform-origin: 50% 50%; transform: translate(calc(var(--mx, 0) * var(--k) * 1px), calc(var(--my, 0) * var(--k) * 1px)); transition: transform 1.2s var(--ease); }
+  .js:not(.reduce) .shapes polygon { animation: rise 1.6s var(--ease) both; animation-delay: var(--dl); }
+  @keyframes rise { from { opacity: 0; translate: 0 18%; } to { opacity: 1; translate: 0 0; } }
+  .pill { display: inline-flex; align-items: center; gap: 10px; align-self: flex-start; height: 34px; padding: 0 12px 0 4px; margin-bottom: 36px; border-radius: 999px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .2); color: #fff; font-size: 13.5px; text-decoration: none; transition: background-color .3s; }
+  .pill:hover { background: rgba(255, 255, 255, .2); }
+  .pill b { height: 26px; display: grid; place-items: center; padding: 0 10px; border-radius: 999px; background: var(--ember); color: #fff; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+  .pill svg { width: 14px; height: 14px; transition: transform .5s var(--ease); }
+  .pill:hover svg { transform: translateX(3px); }
+  h1 { font-size: clamp(48px, 9vw, 140px); line-height: .93; letter-spacing: -0.058em; }
   h1 .ln { display: block; overflow: hidden; padding: 0 .06em .1em 0; margin-bottom: -.1em; }
   h1 .ln > span { display: block; }
-  h1 .ln + .ln { color: var(--ink-3); }
-  h1 em { color: var(--accent); letter-spacing: -0.02em; padding-right: .04em; }
-  .hero-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: end; margin-top: 56px; }
-  .lede { margin: 0; max-width: 460px; font-size: clamp(17px, 1.5vw, 20px); line-height: 1.5; color: var(--ink-2); }
-  .actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
-  .facts { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 72px 0 0; padding: 20px 0 0; list-style: none; border-top: 1px solid var(--line); font: 400 13px var(--mono); color: var(--ink-2); }
-  .facts li::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 10px; border-radius: 50%; background: var(--accent); transform: translateY(-2px); }
+  h1 .ln + .ln { color: rgba(255, 255, 255, .58); }
+  h1 em { color: var(--ice); letter-spacing: -0.02em; padding-right: .04em; }
+  .hero-foot { display: grid; grid-template-columns: 5fr 7fr; gap: 56px; align-items: end; margin-top: 56px; }
+  .hero-copy { min-width: 0; }
+  .lede { margin: 0; max-width: 440px; font-size: clamp(17px, 1.45vw, 20px); line-height: 1.5; color: rgba(255, 255, 255, .82); }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 28px 0 0; padding: 18px 0 0; list-style: none; border-top: 1px solid rgba(255, 255, 255, .2); font: 400 12.5px var(--mono); color: rgba(255, 255, 255, .78); }
+  .facts li::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 9px; border-radius: 50%; background: var(--ice); transform: translateY(-2px); }
+
+  .install { min-width: 0; border-radius: 22px; padding: 8px; background: var(--card); color: var(--ink); box-shadow: 0 40px 90px -36px rgba(4, 16, 64, .7); }
+  .tabs { position: relative; display: inline-flex; padding: 4px; border-radius: 999px; background: var(--bg-2); }
+  .tabs button { position: relative; z-index: 1; height: 34px; padding: 0 16px; border: 0; border-radius: 999px; background: none; color: var(--ink-2); font: 500 13.5px var(--sans); cursor: pointer; transition: color .3s; }
+  .tabs button[aria-selected="true"] { color: var(--ink); }
+  .tab-ind { position: absolute; top: 4px; bottom: 4px; left: var(--x, 4px); width: var(--w, 0); border-radius: 999px; background: var(--tab); box-shadow: 0 1px 3px rgba(0, 0, 0, .14); transition: left .55s var(--ease), width .55s var(--ease); }
+  .pane { padding: 14px 12px 6px; }
+  .preview { height: 148px; overflow: hidden; white-space: pre-wrap; font: 400 12.5px/1.7 var(--mono); color: var(--ink-2); -webkit-mask-image: linear-gradient(#000 45%, transparent); mask-image: linear-gradient(#000 45%, transparent); }
+  .caret { display: inline-block; width: .55em; height: 1.1em; margin-left: 1px; vertical-align: -3px; background: var(--cobalt); animation: blink .8s steps(2) infinite; }
+  .term { height: 148px; display: flex; flex-direction: column; justify-content: center; gap: 4px; font: 400 13.5px/1.8 var(--mono); overflow: hidden; white-space: nowrap; }
+  .term .p { color: var(--cobalt); }
+  .term .dim { color: var(--ink-3); font-size: 12px; }
+  .pane-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--ink-2); }
+  .copy.big { height: 42px; padding: 0 20px; font: 500 14px var(--sans); background: var(--cobalt); color: #fff; }
+  .copy.big:hover { background: var(--ink); color: var(--bg); }
 
   .btn { position: relative; display: inline-flex; align-items: center; gap: 12px; height: 52px; padding: 0 8px 0 24px; border-radius: 999px; background: var(--ink); color: var(--bg); font: 500 15.5px var(--sans); text-decoration: none; overflow: hidden; isolation: isolate; white-space: nowrap; }
   .btn::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--accent); transform: translateY(101%); transition: transform .6s var(--ease); }
@@ -120,58 +154,100 @@
 
   /* sections */
   section.block { padding-top: 160px; scroll-margin-top: 40px; }
-  .head { display: grid; grid-template-columns: 3fr 9fr; gap: 32px; padding-top: 22px; border-top: 1px solid var(--line); }
-  .kicker { font: 400 12.5px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); padding-top: .9em; }
-  .kicker i { font-style: normal; color: var(--accent); margin-right: 10px; }
+  .head { max-width: 980px; }
+  .head.center { margin-inline: auto; text-align: center; }
   h2 { font-size: clamp(36px, 5vw, 72px); line-height: .98; letter-spacing: -0.05em; }
   h2 .dim { color: var(--ink-3); }
+  h2 em { color: var(--accent); }
   .intro { margin: 24px 0 0; max-width: 560px; color: var(--ink-2); font-size: 18px; }
 
-  /* how it works (scroll-driven) */
-  .scrolly { position: relative; height: 300vh; }
-  .sticky { position: sticky; top: 0; height: 100vh; height: 100svh; display: grid; grid-template-columns: 4fr 8fr; gap: 56px; align-items: center; padding-top: 34px; }
-  .stages { list-style: none; margin: 0; padding: 0; }
-  .stage { padding: 22px 0; border-top: 1px solid var(--line); opacity: .3; transition: opacity .6s var(--ease); }
-  .stage:last-child { border-bottom: 1px solid var(--line); }
-  .stage.on { opacity: 1; }
-  .stage .n { font: 400 12.5px var(--mono); color: var(--ink-3); }
-  .stage.on .n { color: var(--accent); }
-  .stage h3 { margin-top: 4px; font-size: 28px; letter-spacing: -0.04em; }
-  .stage p { margin: 6px 0 0; font-size: 16px; color: var(--ink-2); max-width: 340px; }
-  .viz { padding: 28px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); }
-  .viz-top, .viz-bot { display: flex; justify-content: space-between; gap: 12px; font: 400 12.5px var(--mono); color: var(--ink-3); }
-  .viz-bot { color: var(--ink-2); }
-  .viz-bot b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
-  .viz-bot .ok { color: var(--ok); opacity: 0; transition: opacity .5s; }
-  .viz.done .viz-bot .ok { opacity: 1; }
-  .track { position: relative; height: 360px; margin: 18px 0; }
-  .track::before { content: ""; position: absolute; left: 0; right: 0; top: calc(50% + 16px); height: 8px; background: repeating-linear-gradient(90deg, var(--line-2) 0 1px, transparent 1px calc(100% / 60)); opacity: calc(1 - var(--s, 0)); }
-  .seg { --row: 40px; position: absolute; top: calc(50% - 10px); height: 20px; width: 12.5%; left: calc(var(--i) * 12.5%); padding: 0 calc(3px * var(--s, 0)); transform: translateY(calc((var(--i) - 3.5) * var(--row) * var(--s, 0))); }
-  .seg .bar { position: relative; height: 100%; background: var(--bg-2); overflow: hidden; border-radius: calc(5px * var(--s, 0)); }
-  .seg:first-child .bar { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }
-  .seg:last-child .bar { border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
-  .seg .fill { position: absolute; inset: 0; background: var(--accent); transform-origin: 0 50%; transform: scaleX(var(--f, 0)); transition: background-color .6s; }
-  .viz.done .seg .fill { background: var(--ink); }
-  .seg .lab { position: absolute; left: calc(3px * var(--s, 0)); bottom: calc(100% + 5px); font: 400 11px var(--mono); color: var(--ink-3); white-space: nowrap; opacity: var(--s, 0); }
-  .seg .lab span { color: var(--ink-2); }
-  .stamp { position: absolute; left: 50%; top: calc(50% - 64px); transform: translate(-50%, 8px); font: 400 13px var(--mono); color: var(--ink); opacity: 0; transition: opacity .5s, transform .8s var(--ease); white-space: nowrap; }
-  .stamp.show { opacity: 1; transform: translate(-50%, 0); }
-  .stamp.start { color: var(--ink-3); }
-  .stage-desc { display: none; }
+  /* how it works (scroll-driven story) */
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .scrolly { position: relative; height: 420vh; }
+  .sticky { position: sticky; top: 0; height: 100vh; height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding-top: 56px; }
+  .rail { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); width: min(560px, 100%); padding-bottom: 14px; }
+  .rail::before, .rail-fill { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; border-radius: 2px; }
+  .rail::before { right: 0; background: var(--line); }
+  .rail-fill { width: calc(var(--rp, 0) * 100%); background: linear-gradient(90deg, var(--cobalt), var(--sky), var(--ice)); }
+  .rail button { all: unset; cursor: pointer; font: 500 13px var(--mono); color: var(--ink-3); text-align: center; transition: color .4s; }
+  .rail button:hover { color: var(--ink-2); }
+  .rail button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+  .rail button::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--line-2); transform: translateY(-1px); transition: background-color .4s; }
+  .rail button.on { color: var(--ink); }
+  .rail button.on::before, .rail button.past::before { background: var(--cobalt); }
+  .say { margin: 0; max-width: 640px; min-height: 2.6em; text-align: center; font-size: clamp(19px, 2vw, 26px); line-height: 1.3; letter-spacing: -0.025em; font-weight: 500; transition: opacity .22s, transform .45s var(--ease); }
+  .say.out { opacity: 0; transform: translateY(10px); }
+  .scene { position: relative; width: 100%; max-width: min(760px, calc((100svh - 230px) * 640 / 600)); }
+  .scene svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .count { position: absolute; top: 0; right: 0; z-index: 1; padding: 6px 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font: 400 12px var(--mono); color: var(--ink-2); }
+  .count b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .cloud { fill: var(--cloud); animation: bob 7s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-4px); } }
+  .m-body { fill: var(--card); stroke: var(--line-2); }
+  .m-slot { fill: none; stroke: var(--line-2); stroke-dasharray: 3 3; }
+  .m-lab { font: 500 10px var(--mono); fill: var(--ink-3); }
+  .m-bar { fill: var(--cobalt); }
+  .led { fill: var(--line-2); }
+  .led.busy { fill: var(--cobalt); animation: blink .5s steps(2) infinite; }
+  .led { transform-box: fill-box; transform-origin: center; }
+  .led.done { fill: var(--ok); animation: pop .5s var(--ease); }
+  @keyframes pop { 40% { transform: scale(1.9); } }
+  .laptop.hot .lid, .laptop.hot .scr, .laptop.hot #faceHot { animation: jitter .14s steps(2) infinite; }
+  @keyframes jitter { 0% { transform: translate(-1px, 0); } 100% { transform: translate(1px, -.5px); } }
+  @keyframes blink { 50% { opacity: .2; } }
+  .film { fill: var(--film); }
+  .f-empty { fill: var(--film-2); }
+  .strip-lab { font: 400 11px var(--mono); fill: var(--ink-3); }
+  .lid { fill: var(--card); stroke: var(--ink); stroke-width: 2.5; }
+  .scr { fill: color-mix(in srgb, var(--ember) calc(var(--heat, 0) * 30%), var(--bg-2)); }
+  .base { fill: var(--ink); }
+  .notch { fill: var(--ink-3); }
+  .face { transition: opacity .3s; }
+  .face path { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .face .eye { fill: var(--ink); }
+  .face .drop { fill: var(--sky); stroke: none; }
+  .heat path { fill: none; stroke: var(--ember); stroke-width: 3; stroke-linecap: round; animation: heat 1.4s ease-in infinite; }
+  .heat path:nth-child(2) { animation-delay: .45s; }
+  .heat path:nth-child(3) { animation-delay: .9s; }
+  @keyframes heat { 0% { transform: translateY(8px); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+  .t-tube { fill: var(--bg-2); stroke: var(--line-2); }
+  .snow { animation: bob 4s ease-in-out infinite; }
+  .snow path { fill: none; stroke: var(--sky); stroke-width: 2.2; stroke-linecap: round; }
+  .file .doc { fill: var(--card); stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
+  .file .mp4 { font: 700 12px var(--mono); fill: var(--cobalt); text-anchor: middle; }
+  .file .fname { font: 400 11px var(--mono); fill: var(--ink-2); text-anchor: middle; }
+  .file .chk-bg { fill: var(--ok); }
+  .file .chk { fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
   /* setup */
-  .steps { list-style: none; margin: 64px 0 0; padding: 0; }
-  .step { display: grid; grid-template-columns: 3fr 9fr; gap: 32px; padding: 36px 0; border-top: 1px solid var(--line); }
-  .step:last-child { border-bottom: 1px solid var(--line); }
-  .step .num { font: italic 400 clamp(52px, 5.4vw, 84px)/.85 var(--serif); color: var(--ink-3); }
-  .step-body { min-width: 0; max-width: 720px; }
-  .step h3 { font-size: clamp(24px, 2.4vw, 32px); letter-spacing: -0.04em; line-height: 1.1; }
+  .way { display: grid; grid-template-columns: 3fr 9fr; gap: 32px; margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--line); }
+  .way + .way { margin-top: 80px; }
+  .way-label { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; font: 400 12.5px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+  .badge { padding: 4px 10px; border-radius: 999px; background: var(--ember); color: #fff; font-size: 11px; }
+  .way-body { min-width: 0; max-width: 780px; }
+  .way-body > h3 { font-size: clamp(28px, 2.8vw, 40px); letter-spacing: -0.045em; line-height: 1.05; }
+  .way-body > p { margin: 12px 0 0; max-width: 600px; color: var(--ink-2); }
+  .prompt { margin-top: 28px; border-radius: 18px; overflow: hidden; background: var(--code-bg); box-shadow: 0 30px 70px -40px rgba(30, 79, 216, .55); }
+  .prompt-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 18px; border-bottom: 1px solid rgba(231, 233, 230, .1); font: 400 12px var(--mono); color: var(--code-dim); }
+  .prompt-bar span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 10px; border-radius: 50%; background: var(--ember); }
+  .prompt-bar .copy { height: 36px; padding: 0 16px; background: var(--cobalt); color: #fff; font: 500 13px var(--sans); }
+  .prompt-bar .copy:hover { background: #fff; color: #0D0E0F; }
+  #promptText { margin: 0; padding: 20px; max-height: 360px; overflow: auto; white-space: pre-wrap; font: 400 13px/1.75 var(--mono); color: var(--code-ink); scrollbar-width: thin; }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .step { position: relative; padding: 0 0 40px 40px; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before { content: ""; position: absolute; left: 4px; top: 8px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--cobalt); background: var(--bg); box-sizing: border-box; transition: background-color .6s var(--ease) .3s; }
+  .step.in::before { background: var(--cobalt); }
+  .step::after { content: ""; position: absolute; left: 10px; top: 28px; bottom: 6px; width: 2px; border-radius: 2px; background: linear-gradient(var(--cobalt), var(--line)); }
+  .step:last-child::after { display: none; }
+  .step-body { min-width: 0; }
+  .step h3 { font-size: clamp(20px, 2vw, 25px); letter-spacing: -0.035em; line-height: 1.15; }
   .step p { margin: 8px 0 0; color: var(--ink-2); }
   .step p code { font-size: .85em; padding: 2px 7px; border-radius: 6px; background: var(--bg-2); color: var(--ink); white-space: nowrap; }
-  pre { position: relative; margin: 18px 0 0; padding: 0 8px 0 20px; height: 56px; display: flex; align-items: center; gap: 12px; border-radius: 14px; background: var(--code-bg); color: var(--code-ink); font-size: 14px; }
-  pre code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
-  pre .p { color: var(--code-dim); }
-  pre .copy { background: #2A2E31; color: #D8DBD7; }
+  pre.line { position: relative; margin: 16px 0 0; padding: 0 8px 0 20px; height: 56px; display: flex; align-items: center; gap: 12px; border-radius: 14px; background: var(--code-bg); color: var(--code-ink); font-size: 14px; }
+  pre.line code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+  pre.line .p { color: var(--code-dim); }
+  pre.line .copy { background: #2A2E31; color: #D8DBD7; }
   .os { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 18px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
   .os div { padding: 14px 16px; min-width: 0; font-size: 14px; }
   .os div + div { border-left: 1px solid var(--line); }
@@ -179,7 +255,10 @@
   .os code { font-size: 13px; }
 
   /* faq */
-  .faq { margin-top: 56px; margin-left: calc((100% - 32px) * 3 / 12 + 32px); }
+  .faq-grid { display: grid; grid-template-columns: 4fr 8fr; gap: 32px; align-items: start; }
+  .faq-head { position: sticky; top: 110px; }
+  .faq-head .intro { margin-top: 16px; font-size: 16px; }
+  .faq { min-width: 0; }
   details { border-top: 1px solid var(--line); }
   details:last-child { border-bottom: 1px solid var(--line); }
   summary { cursor: pointer; list-style: none; padding: 24px 0; font-size: clamp(18px, 1.8vw, 22px); letter-spacing: -0.025em; font-weight: 500; display: flex; justify-content: space-between; align-items: center; gap: 24px; transition: color .3s; }
@@ -196,24 +275,33 @@
 
   /* footer */
   footer { padding: 160px 12px 12px; }
-  .panel { position: relative; overflow: hidden; border-radius: 28px; background: var(--panel); color: var(--panel-ink); padding: 88px 0 0; }
+  .panel { position: relative; overflow: clip; border-radius: 28px; background: var(--panel); color: var(--panel-ink); padding: 88px 0 0; }
   .panel .wrap { width: min(1280px, 100% - 2 * var(--gutter) + 24px); }
   .panel h2 { font-size: clamp(44px, 7.4vw, 112px); line-height: .92; letter-spacing: -0.058em; }
-  .panel h2 em { color: #9DB8FF; }
+  .panel h2 em { color: var(--ice); }
   .panel-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 40px; }
   .panel .cmd { background: transparent; border-color: var(--panel-line); color: var(--panel-ink); }
   .panel .cmd .p { color: var(--panel-2); }
   .panel .copy, .panel .btn { background: var(--panel-ink); color: var(--panel); }
   .panel .btn .arr { background: var(--panel); color: var(--panel-ink); }
-  .panel .copy:hover { background: #9DB8FF; color: #0D0E0F; }
+  .panel .cmd .copy { background: var(--cobalt); color: #fff; }
+  .panel .copy:hover { background: var(--ice); color: #0D0E0F; }
   .foot-grid { display: grid; grid-template-columns: 6fr 3fr 3fr; gap: 32px; margin-top: 96px; padding-top: 28px; border-top: 1px solid var(--panel-line); }
   .foot-grid p { margin: 12px 0 0; max-width: 300px; font-size: 15px; color: var(--panel-2); }
   .foot-grid h4 { margin: 0 0 12px; font: 400 12px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--panel-2); }
   .foot-grid ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
   .foot-grid a { font-size: 15px; text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size .5s var(--ease); }
   .foot-grid a:hover { background-size: 100% 1px; }
+  .foot-bottom .top { display: inline-flex; align-items: center; gap: 6px; color: var(--panel-ink); text-decoration: none; }
+  .foot-bottom .top svg { width: 13px; height: 13px; transition: transform .5s var(--ease); }
+  .foot-bottom .top:hover svg { transform: translateY(-3px); }
   .foot-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; margin-top: 56px; font: 400 12px var(--mono); color: var(--panel-2); }
-  .wordmark { display: block; margin-top: 24px; font: 500 22.4vw/.72 var(--sans); letter-spacing: -0.075em; text-align: center; white-space: nowrap; color: var(--panel-ink); opacity: .08; user-select: none; transform: translateY(12%); }
+  .wordmark { display: block; margin-top: 24px; font: 500 22.4vw/.72 var(--sans); letter-spacing: -0.075em; text-align: center; white-space: nowrap; background: linear-gradient(90deg, var(--cobalt), var(--sky) 25%, var(--ice) 50%, var(--sky) 75%, var(--cobalt)) calc(var(--gx, .5) * 100%) 0 / 200% 100%; transition: background-position 1.2s var(--ease); -webkit-background-clip: text; background-clip: text; color: transparent; user-select: none; transform: translateY(12%); }
+
+  /* press feedback + magnetic buttons */
+  .btn, .copy, .icon-btn, .pill, .tabs button { transition: background-color .3s, color .3s, border-color .3s, scale .25s var(--ease), translate .6s var(--ease); }
+  .btn:active, .copy:active, .icon-btn:active, .pill:active, .tabs button:active { scale: .96; }
+  .copy svg { width: 13px; height: 13px; margin-right: 4px; vertical-align: -2px; }
 
   /* reveal motion (only with JS and motion allowed) */
   .js:not(.reduce) [data-reveal] { opacity: 0; transform: translateY(24px); transition: opacity 1.1s var(--ease), transform 1.2s var(--ease); transition-delay: var(--d, 0s); }
@@ -226,15 +314,14 @@
   .js:not(.reduce) [data-split] .w > span { transform: translateY(110%); transition: transform 1.1s var(--ease); }
   .js:not(.reduce) [data-split].in .w > span { transform: none; }
 
+  @media (min-width: 761px) and (max-height: 820px) {
+    .hero { padding: 40px 0 32px; }
+    .pill { margin-bottom: 24px; }
+    h1 { font-size: clamp(48px, min(9vw, 14.5svh), 140px); }
+    .hero-foot { margin-top: 36px; }
+    .preview, .term { height: 104px; }
+  }
   @media (max-width: 1000px) {
-    .sticky { grid-template-columns: 1fr; gap: 16px; align-content: center; }
-    .stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .stage, .stage:last-child { padding: 12px 0 0; border-bottom: 0; }
-    .stage h3 { font-size: 18px; }
-    .stage p { display: none; }
-    .stage-desc { display: block; margin: 0; min-height: 3.2em; font-size: 15px; color: var(--ink-2); }
-    .track { height: 300px; }
-    .seg { --row: 32px; }
     .foot-grid { grid-template-columns: 1fr 1fr; }
     .foot-grid > div:first-child { grid-column: 1 / -1; }
   }
@@ -243,30 +330,36 @@
     body { font-size: 16px; }
     .nav nav, .nav .gh-label { display: none; }
     .nav-actions { margin-left: auto; }
-    .hero { min-height: 0; padding: 128px 0 24px; }
+    .hero-wrap { padding: 76px 8px 0; }
+    .hero { min-height: 0; padding: 36px 0 8px; border-radius: 22px; }
+    .hero-in { width: calc(100% - 32px); }
+    .shapes { right: -42%; top: -2%; height: 64%; }
+    .pill { margin-bottom: 28px; }
     h1 { font-size: 13.4vw; }
-    .hero-foot { grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 32px; }
-    .actions { justify-content: stretch; flex-direction: column; align-items: stretch; }
+    .hero-foot { grid-template-columns: minmax(0, 1fr); gap: 32px; margin-top: 28px; }
+    .facts { flex-direction: column; gap: 6px; }
+    .install { margin: 0 -8px; border-radius: 18px; }
+    .pane-foot { flex-direction: column; align-items: stretch; }
+    .copy.big { width: 100%; }
     .btn { justify-content: space-between; }
     .cmd { font-size: 12.5px; padding-left: 16px; }
-    .facts { margin-top: 48px; flex-direction: column; font-size: 12.5px; }
     section.block { padding-top: 112px; }
-    .head, .step { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-    .kicker { padding-top: 0; }
-    .scrolly { height: 260vh; }
-    .viz { padding: 18px 14px; border-radius: 18px; }
-    .viz-top, .viz-bot { font-size: 11px; }
-    .viz-top span:first-child { display: none; }
-    .track { height: 280px; }
-    .seg .lab span { display: none; }
-    .stages { gap: 8px; }
-    .stage h3 { font-size: 15px; letter-spacing: -0.02em; }
-    .step { padding: 28px 0; }
-    .step .num { font-size: 44px; }
+    .way { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    #promptText { font-size: 12px; padding: 16px; max-height: 300px; }
+    .prompt-bar span { font-size: 11px; }
+    .scrolly { height: 380vh; }
+    .sticky { gap: 12px; padding-top: 64px; }
+    .rail button { font-size: 11px; }
+    .rail button::before { width: 6px; height: 6px; margin-right: 6px; }
+    .say { font-size: 17px; min-height: 3.9em; }
+    .count { font-size: 10.5px; padding: 4px 9px; }
+    .step { padding: 0 0 32px 34px; }
     .os { grid-template-columns: 1fr; }
     .os div + div { border-left: 0; border-top: 1px solid var(--line); }
-    pre { font-size: 12.5px; padding-left: 16px; }
-    .faq { margin-left: 0; margin-top: 40px; }
+    pre.line { font-size: 12.5px; padding-left: 16px; }
+    pre.line code { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+    .faq-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+    .faq-head { position: static; }
     details p { padding-right: 0; }
     footer { padding: 112px 8px 8px; }
     .panel { border-radius: 22px; padding-top: 64px; }
@@ -278,7 +371,7 @@
     html { scroll-behavior: auto; }
     .scrolly { height: auto; }
     .sticky { position: static; height: auto; padding: 56px 0 0; }
-    .stage { opacity: 1; }
+    .say { min-height: 0; }
   }
 </style>
 </head>
@@ -306,49 +399,93 @@
   </div>
 </header>
 
+<div class="sr-only" id="live" aria-live="polite"></div>
 <main id="top">
-  <section class="hero wrap">
+  <div class="hero-wrap"><section class="hero" id="hero">
+    <svg class="shapes" viewBox="0 0 64 64" aria-hidden="true"><polygon style="--k:-14;--dl:.15s" points="11,7 23.8,13.4 23.8,50.6 11,57" fill="#fff" fill-opacity=".07"/><polygon style="--k:-26;--dl:.28s" points="28,15.5 40.8,21.9 40.8,42.1 28,48.5" fill="#fff" fill-opacity=".1"/><polygon style="--k:-40;--dl:.41s" points="45,24 57,32 45,40" fill="#9BE3F5" fill-opacity=".32"/></svg>
+    <div class="wrap hero-in">
+    <a class="pill" href="#setup" data-reveal><b>New</b><span>Set up with one Claude Code prompt</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     <h1 id="h1"><span class="ln"><span>Render in the cloud.</span></span><span class="ln"><span>Your laptop stays <em>cold.</em></span></span></h1>
     <div class="hero-foot">
-      <p class="lede" data-reveal style="--d:.3s">coldframe renders your Remotion videos on free GitHub machines and brings the MP4 back to you.</p>
-      <div class="actions" data-reveal style="--d:.4s">
-        <div class="cmd"><span class="p">$</span><code>npx github:Razee4315/coldframe setup</code><button class="copy" data-copy="npx github:Razee4315/coldframe setup">Copy</button></div>
-        <a class="btn" href="#setup">Get started
-          <span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span></a>
+      <div class="hero-copy" data-reveal style="--d:.3s">
+        <p class="lede">coldframe renders your Remotion videos on free GitHub machines, up to 20 at once, and brings the MP4 back to you.</p>
+        <ul class="facts">
+          <li>Every frame checked</li>
+          <li>Free on public repos</li>
+          <li>Open source, MIT</li>
+        </ul>
+      </div>
+      <div class="install" data-reveal style="--d:.42s">
+        <div class="tabs" role="tablist" aria-label="How to install">
+          <button role="tab" id="tab-claude" aria-controls="pane-claude" aria-selected="true">Claude Code</button>
+          <button role="tab" id="tab-term" aria-controls="pane-term" aria-selected="false" tabindex="-1">Terminal</button>
+          <span class="tab-ind" aria-hidden="true"></span>
+        </div>
+        <div class="pane" id="pane-claude" role="tabpanel" aria-labelledby="tab-claude">
+          <div class="preview" id="promptPreview" aria-hidden="true"></div>
+          <div class="pane-foot">
+            <span>Paste into Claude Code in your Remotion project. It installs everything.</span>
+            <button class="copy big" data-copy-from="promptText">Copy prompt</button>
+          </div>
+        </div>
+        <div class="pane" id="pane-term" role="tabpanel" aria-labelledby="tab-term" hidden>
+          <div class="term">
+            <div><span class="p">$</span> npx github:Razee4315/coldframe setup</div>
+            <div class="dim">then</div>
+            <div><span class="p">$</span> npx github:Razee4315/coldframe render MyVideo</div>
+          </div>
+          <div class="pane-foot">
+            <span>Needs Node.js 18+ and the GitHub CLI.</span>
+            <button class="copy big" data-copy="npx github:Razee4315/coldframe setup">Copy setup</button>
+          </div>
+        </div>
       </div>
     </div>
-    <ul class="facts" data-reveal style="--d:.5s">
-      <li>Up to 20 machines at once</li>
-      <li>Every frame checked</li>
-      <li>Free on public repos</li>
-    </ul>
-  </section>
+    </div>
+  </section></div>
 
   <div class="wrap">
     <!-- HOW -->
     <section class="block" id="how">
-      <div class="head">
-        <div class="kicker"><i>01</i>How it works</div>
+      <div class="head center">
         <h2 data-split>One video in. <span class="dim">One MP4 out.</span></h2>
       </div>
 
       <div class="scrolly" id="scrolly">
         <div class="sticky">
-          <ol class="stages">
-            <li class="stage on"><div class="n">01</div><h3>Split</h3><p>Your video is cut into equal frame ranges.</p></li>
-            <li class="stage"><div class="n">02</div><h3>Render</h3><p>Each range renders on its own GitHub machine, all at once.</p></li>
-            <li class="stage"><div class="n">03</div><h3>Join</h3><p>The pieces are joined, every frame is counted, and the MP4 comes back to you.</p></li>
+          <div class="rail" id="rail"><span class="rail-fill" aria-hidden="true"></span><button type="button">Split</button><button type="button">Render</button><button type="button">Join</button></div>
+          <p class="say" id="say">Normally your laptop renders every frame, one by one. It gets hot.</p>
+          <ol class="sr-only">
+            <li>Split: your video is cut into 8 equal pieces.</li>
+            <li>Render: 8 GitHub machines render their piece at the same time.</li>
+            <li>Join: the pieces are joined into one MP4 and every frame is counted.</li>
           </ol>
-          <div>
-            <p class="stage-desc" id="stageDesc" aria-live="polite">Your video is cut into equal frame ranges.</p>
-            <div class="viz" id="viz" aria-hidden="true">
-              <div class="viz-top"><span>MyVideo · 600 frames</span><span id="vizState">1 video</span></div>
-              <div class="track" id="track">
-                <div class="stamp start show" id="stampStart">frame 0 → 599</div>
-                <div class="stamp" id="stampEnd">✓ out/cloud/MyVideo.mp4</div>
-              </div>
-              <div class="viz-bot"><span><b id="frames">000</b> / 600 frames</span><span class="ok">all checked</span></div>
-            </div>
+          <div class="scene">
+            <div class="count"><b id="frames">000</b> / 600 frames</div>
+            <svg id="stage" viewBox="0 0 640 600" aria-hidden="true">
+              <defs>
+                <pattern id="holes" width="5" height="28" patternUnits="userSpaceOnUse"><rect x="1.2" y="2.3" width="2.6" height="2" rx=".6" fill="#fff" fill-opacity=".45"/><rect x="1.2" y="23.7" width="2.6" height="2" rx=".6" fill="#fff" fill-opacity=".45"/></pattern>
+              </defs>
+              <g id="cam">
+                <g class="cloud"><circle cx="175" cy="122" r="70"/><circle cx="290" cy="96" r="86"/><circle cx="415" cy="99" r="80"/><circle cx="515" cy="130" r="66"/><rect x="95" y="116" width="450" height="116" rx="58"/></g>
+                <g id="machines"></g>
+                <g class="laptop" id="laptop">
+                  <g id="heat" class="heat" style="opacity:0"><path d="M268 402 q6 -8 0 -16 q-6 -8 0 -16"/><path d="M320 398 q6 -8 0 -16 q-6 -8 0 -16"/><path d="M372 402 q6 -8 0 -16 q-6 -8 0 -16"/></g>
+                  <rect class="lid" x="215" y="410" width="210" height="132" rx="10"/>
+                  <rect class="scr" x="226" y="421" width="188" height="110" rx="4"/>
+                  <g id="faceCool" class="face"><circle class="eye" cx="300" cy="468" r="5"/><circle class="eye" cx="340" cy="468" r="5"/><path d="M302 486 Q320 500 338 486"/></g>
+                  <g id="faceHot" class="face" style="opacity:0"><path d="M293 462 l9 6 l-9 6"/><path d="M347 462 l-9 6 l9 6"/><path d="M298 494 q5.5 -6 11 0 t11 0 t11 0 t11 0"/><path class="drop" d="M362 444 q7 9 0 13 q-7 -4 0 -13z"/></g>
+                  <rect class="base" x="180" y="544" width="280" height="12" rx="6"/>
+                  <rect class="notch" x="296" y="544" width="48" height="5" rx="2.5"/>
+                  <g class="thermo"><rect class="t-tube" x="476" y="430" width="12" height="92" rx="6"/><rect id="tLevel" x="479" y="480" width="6" height="42" rx="3" fill="#1FA0DC"/><circle id="tBulb" cx="482" cy="528" r="11" fill="#1FA0DC"/></g>
+                  <g id="snow" class="snow" style="opacity:0"><path transform="translate(158 470)" d="M0 -8V8M-7 -4L7 4M-7 4L7 -4"/><path transform="translate(530 452) scale(.75)" d="M0 -8V8M-7 -4L7 4M-7 4L7 -4"/><path transform="translate(186 520) scale(.6)" d="M0 -8V8M-7 -4L7 4M-7 4L7 -4"/></g>
+                </g>
+                <text id="stripLab" class="strip-lab" x="80" y="318">MyVideo · 600 frames</text>
+                <g id="strip"></g>
+                <g id="file" class="file" style="opacity:0"><path class="doc" d="M296 316h34l14 14v44h-48z"/><path class="doc" d="M330 316v14h14"/><text class="mp4" x="320" y="356">MP4</text><circle class="chk-bg" cx="345" cy="372" r="10"/><path class="chk" d="M340 372l3.5 3.5 6.5 -7"/><text class="fname" x="320" y="398">MyVideo.mp4</text></g>
+              </g>
+            </svg>
           </div>
         </div>
       </div>
@@ -357,47 +494,77 @@
     <!-- SETUP -->
     <section class="block" id="setup">
       <div class="head">
-        <div class="kicker"><i>02</i>Setup</div>
-        <div>
-          <h2 data-split>Three steps. <span class="dim">Five minutes, <em>once.</em></span></h2>
-          <p class="intro" data-reveal>You need a Remotion project and <a href="https://nodejs.org">Node.js</a> 18+.</p>
+        <h2 data-split>One prompt. <span class="dim">Or three <em>commands.</em></span></h2>
+      </div>
+
+      <div class="way" data-reveal>
+        <div class="way-label"><span class="badge">Easiest</span>With Claude Code</div>
+        <div class="way-body">
+          <h3>Paste one prompt</h3>
+          <p>Claude Code checks your project, installs what's missing, connects GitHub and runs setup. It asks you before it creates a repo or starts a render.</p>
+          <div class="prompt">
+            <div class="prompt-bar"><span>Prompt for Claude Code</span><button class="copy" data-copy-from="promptText">Copy prompt</button></div>
+<pre id="promptText">Set up coldframe in this project so my Remotion videos render in the cloud on free GitHub machines instead of on this computer. coldframe: https://github.com/Razee4315/coldframe
+
+Do everything for me, one step at a time, and tell me briefly what you're doing:
+
+1. Check that this folder is a Remotion project (package.json lists "remotion"). If not, stop and ask me where my project is.
+2. Check that Node.js is 18 or newer. If package-lock.json is missing, run npm install.
+3. Check the GitHub CLI with `gh --version`. If it's missing, install it (Windows: winget install GitHub.cli, macOS: brew install gh, Linux: https://cli.github.com). If this terminal can't find it after installing, use its full path.
+4. Check `gh auth status`. If I'm not signed in, ask me to run this in my own terminal, and wait until I say it's done:
+   gh auth login --web --git-protocol https --scopes workflow
+5. If this folder isn't on GitHub yet (no github.com "origin" remote), ask me: public repo (renders free, no limit) or private (2,000 free minutes a month)? Then run git init -b main if needed, commit everything, and create and push the repo with:
+   gh repo create &lt;folder-name&gt; --public (or --private) --source . --push
+6. Run: npx github:Razee4315/coldframe setup
+   It adds the render workflow and Claude Code skills, then commits and pushes them. If it stops with an error, fix the cause and run it again.
+7. List my compositions with npx remotion compositions and show me their ids. Ask me before rendering, then render the one I pick with:
+   npx github:Razee4315/coldframe render &lt;CompositionId&gt;
+   The MP4 is saved in out/cloud/.
+
+End with a short summary of what changed in my project.</pre>
+          </div>
         </div>
       </div>
 
-      <ol class="steps">
-        <li class="step" data-reveal><span class="num">01</span><div class="step-body">
-          <h3>Install the GitHub CLI</h3>
-          <div class="os">
-            <div><b>Windows</b><code>winget install GitHub.cli</code></div>
-            <div><b>macOS</b><code>brew install gh</code></div>
-            <div><b>Linux</b><a href="https://cli.github.com">cli.github.com</a></div>
-          </div>
-        </div></li>
-        <li class="step" data-reveal><span class="num">02</span><div class="step-body">
-          <h3>Run setup in your project</h3>
-          <p>It signs you in to GitHub and adds the render workflow. It asks before changing anything.</p>
-          <pre><span class="p">$</span><code>npx github:Razee4315/coldframe setup</code><button class="copy">Copy</button></pre>
-        </div></li>
-        <li class="step" data-reveal><span class="num">03</span><div class="step-body">
-          <h3>Render</h3>
-          <p>Pass your composition id. The MP4 lands in <code>out/cloud/</code>.</p>
-          <pre><span class="p">$</span><code>npx github:Razee4315/coldframe render MyVideo</code><button class="copy">Copy</button></pre>
-        </div></li>
-      </ol>
+      <div class="way" data-reveal>
+        <div class="way-label">By hand</div>
+        <ol class="way-body steps">
+          <li class="step" data-reveal><div class="step-body">
+            <h3>Install the GitHub CLI</h3>
+            <div class="os">
+              <div><b>Windows</b><code>winget install GitHub.cli</code></div>
+              <div><b>macOS</b><code>brew install gh</code></div>
+              <div><b>Linux</b><a href="https://cli.github.com">cli.github.com</a></div>
+            </div>
+          </div></li>
+          <li class="step" data-reveal style="--d:.08s"><div class="step-body">
+            <h3>Run setup in your project</h3>
+            <p>Needs <a href="https://nodejs.org">Node.js</a> 18+. It signs you in to GitHub and adds the render workflow.</p>
+            <pre class="line"><span class="p">$</span><code>npx github:Razee4315/coldframe setup</code><button class="copy">Copy</button></pre>
+          </div></li>
+          <li class="step" data-reveal style="--d:.16s"><div class="step-body">
+            <h3>Render</h3>
+            <p>Pass your composition id. The MP4 lands in <code>out/cloud/</code>.</p>
+            <pre class="line"><span class="p">$</span><code>npx github:Razee4315/coldframe render MyVideo</code><button class="copy">Copy</button></pre>
+          </div></li>
+        </ol>
+      </div>
     </section>
 
     <!-- FAQ -->
     <section class="block" id="faq">
-      <div class="head">
-        <div class="kicker"><i>03</i>FAQ</div>
+      <div class="faq-grid">
+      <div class="faq-head">
         <h2 data-split>Questions.</h2>
+        <p class="intro" data-reveal>Something else? <a href="https://github.com/Razee4315/coldframe/issues">Ask on GitHub</a>.</p>
       </div>
       <div class="faq" data-reveal>
-        <details><summary>Is it really free?<span class="pm"></span></summary><p>Yes, on public repos. Private repos get 2,000 free machine-minutes a month, and each machine counts separately. You're never charged unless you add a payment method.</p></details>
-        <details><summary>Is it faster than my laptop?<span class="pm"></span></summary><p>Not always. Each machine takes about 40 s to start, so short videos are quicker at home. The win is that your computer stays free while long videos render. 3D (WebGL) is much slower there, because the machines have no GPU.</p></details>
-        <details><summary>Will the joins between pieces show?<span class="pm"></span></summary><p>No. Pieces are joined without re-encoding and the audio joins sample-exactly. If the frame count is wrong, the run fails instead of giving you a broken file.</p></details>
-        <details><summary>Can it save renders to Google Drive?<span class="pm"></span></summary><p>Yes. Run <code>npx github:Razee4315/coldframe drive</code> and click Allow. Renders are copied to <code>My Drive/coldframe/</code>, and coldframe can only see files it creates.</p></details>
-        <details><summary>What about Remotion's license?<span class="pm"></span></summary><p>coldframe is MIT. Remotion is free for individuals and teams of up to 3; larger companies need a <a href="https://www.remotion.pro/license">company license</a>.</p></details>
+        <details name="faq"><summary>Is it really free?<span class="pm"></span></summary><p>Yes, on public repos. Private repos get 2,000 free machine-minutes a month, and each machine counts separately. You're never charged unless you add a payment method.</p></details>
+        <details name="faq"><summary>Is it faster than my laptop?<span class="pm"></span></summary><p>Not always. Each machine takes about 40 s to start, so short videos are quicker at home. The win is that your computer stays free while long videos render. 3D (WebGL) is much slower there, because the machines have no GPU.</p></details>
+        <details name="faq"><summary>Will the joins between pieces show?<span class="pm"></span></summary><p>No. Pieces are joined without re-encoding and the audio joins sample-exactly. If the frame count is wrong, the run fails instead of giving you a broken file.</p></details>
+        <details name="faq"><summary>What does the Claude Code prompt change?<span class="pm"></span></summary><p>Only what's written in it: it may install the GitHub CLI, put your project on GitHub if you say yes, and run coldframe setup, which adds a workflow file and Claude Code skills. You can read the whole prompt above before you paste it.</p></details>
+        <details name="faq"><summary>What about Remotion's license?<span class="pm"></span></summary><p>coldframe is MIT. Remotion is free for individuals and teams of up to 3; larger companies need a <a href="https://www.remotion.pro/license">company license</a>.</p></details>
+      </div>
       </div>
     </section>
   </div>
@@ -430,7 +597,8 @@
       </div>
       <div class="foot-bottom">
         <span>MIT · made by <a href="https://github.com/Razee4315">Razee4315</a></span>
-        <span>Not affiliated with Remotion, GitHub or Google.</span>
+        <span>Not affiliated with Remotion, GitHub or Anthropic.</span>
+        <a class="top" href="#top">Back to top <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></a>
       </div>
     </div>
     <span class="wordmark" aria-hidden="true">coldframe</span>
@@ -445,19 +613,114 @@
   const range = (p, a, b) => clamp((p - a) / (b - a));
   const ease = (t) => 1 - Math.pow(1 - t, 3);
 
-  /* theme */
-  document.getElementById("theme").addEventListener("click", () => {
+  /* theme: switch with a circle that grows from the button */
+  const themeBtn = document.getElementById("theme");
+  const flip = () => {
     const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     root.dataset.theme = dark ? "light" : "dark";
     try { localStorage.setItem("cf-theme", root.dataset.theme); } catch {}
+  };
+  themeBtn.addEventListener("click", () => {
+    if (reduce || !document.startViewTransition) return flip();
+    const r = themeBtn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    document.startViewTransition(flip).ready.then(() => root.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${end}px at ${x}px ${y}px)`] },
+      { duration: 700, easing: "cubic-bezier(.19, 1, .22, 1)", pseudoElement: "::view-transition-new(root)" },
+    ));
   });
 
   /* copy */
-  document.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", async () => {
-    const text = b.dataset.copy || b.parentElement.querySelector("code").innerText;
-    try { await navigator.clipboard.writeText(text.trim()); b.textContent = "Copied"; b.classList.add("done"); } catch { b.textContent = "Select + copy"; }
-    setTimeout(() => { b.textContent = "Copy"; b.classList.remove("done"); }, 1600);
-  }));
+  const live = document.getElementById("live");
+  const tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  document.querySelectorAll(".copy").forEach((b) => {
+    const label = b.innerHTML;
+    let t;
+    b.addEventListener("click", async () => {
+      const text = b.dataset.copyFrom ? document.getElementById(b.dataset.copyFrom).textContent
+        : b.dataset.copy || b.parentElement.querySelector("code").innerText;
+      try {
+        await navigator.clipboard.writeText(text.trim());
+        b.innerHTML = `${tick}Copied`; b.classList.add("done"); live.textContent = "Copied to clipboard";
+      } catch { b.textContent = "Select + copy"; }
+      clearTimeout(t);
+      t = setTimeout(() => { b.innerHTML = label; b.classList.remove("done"); live.textContent = ""; }, 1800);
+    });
+  });
+
+  /* magnetic buttons (mouse only) */
+  if (!reduce && matchMedia("(pointer: fine)").matches) {
+    document.querySelectorAll(".btn, .copy.big, .pill").forEach((b) => {
+      b.addEventListener("pointermove", (e) => {
+        const r = b.getBoundingClientRect();
+        b.style.translate = `${((e.clientX - r.left) / r.width - 0.5) * 8}px ${((e.clientY - r.top) / r.height - 0.5) * 6}px`;
+      });
+      b.addEventListener("pointerleave", () => (b.style.translate = ""));
+    });
+  }
+
+  /* install card: prompt preview + tabs */
+  const preview = document.getElementById("promptPreview"), fullPrompt = document.getElementById("promptText").textContent;
+  if (reduce) preview.textContent = fullPrompt;
+  else {
+    // type the start of the prompt once, like it's being written for you
+    const caret = document.createElement("span"), stop = 300;
+    caret.className = "caret";
+    let n = 0;
+    const type = () => {
+      n += 4;
+      preview.textContent = fullPrompt.slice(0, n);
+      if (n < stop) { preview.append(caret); setTimeout(type, 16); } else preview.textContent = fullPrompt;
+    };
+    preview.append(caret);
+    setTimeout(type, 900);
+  }
+  const tabs = [...document.querySelectorAll('[role="tab"]')], ind = document.querySelector(".tab-ind");
+  const placeInd = () => {
+    const t = tabs.find((x) => x.getAttribute("aria-selected") === "true");
+    ind.style.setProperty("--x", `${t.offsetLeft}px`);
+    ind.style.setProperty("--w", `${t.offsetWidth}px`);
+  };
+  const select = (t) => {
+    tabs.forEach((x) => {
+      const on = x === t;
+      x.setAttribute("aria-selected", on);
+      x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute("aria-controls")).hidden = !on;
+    });
+    placeInd();
+  };
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => select(t));
+    t.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const n = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      select(n); n.focus();
+    });
+  });
+  placeInd();
+  document.fonts?.ready.then(placeInd);
+  addEventListener("resize", placeInd);
+
+  /* hero shapes follow the pointer a little */
+  const hero = document.getElementById("hero");
+  if (!reduce && matchMedia("(pointer: fine)").matches) {
+    hero.addEventListener("pointermove", (e) => {
+      const r = hero.getBoundingClientRect();
+      hero.style.setProperty("--mx", ((e.clientX - r.left) / r.width - 0.5).toFixed(3));
+      hero.style.setProperty("--my", ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
+    });
+    hero.addEventListener("pointerleave", () => { hero.style.setProperty("--mx", 0); hero.style.setProperty("--my", 0); });
+  }
+
+  /* footer wordmark: the gradient follows the pointer */
+  const panel = document.querySelector(".panel"), wordmark = document.querySelector(".wordmark");
+  if (!reduce && matchMedia("(pointer: fine)").matches) {
+    panel.addEventListener("pointermove", (e) => {
+      const r = panel.getBoundingClientRect();
+      wordmark.style.setProperty("--gx", ((e.clientX - r.left) / r.width).toFixed(3));
+    });
+  }
 
   /* split headings into words, keeping inner markup */
   document.querySelectorAll("[data-split]").forEach((el) => {
@@ -486,40 +749,118 @@
   document.querySelectorAll("[data-reveal], [data-split]").forEach((el) => io.observe(el));
   requestAnimationFrame(() => document.getElementById("h1").classList.add("in"));
 
-  /* how it works: one bar splits into 8 machines, renders, joins */
-  const track = document.getElementById("track"), viz = document.getElementById("viz");
-  const frames = document.getElementById("frames"), vizState = document.getElementById("vizState");
-  const stampStart = document.getElementById("stampStart"), stampEnd = document.getElementById("stampEnd");
-  const stages = [...document.querySelectorAll(".stage")], desc = document.getElementById("stageDesc");
+  /* how it works: a laptop, a cloud of 8 machines and a film strip */
+  const NS = "http://www.w3.org/2000/svg";
+  const make = (tag, attrs, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    parent.append(n);
+    return n;
+  };
+  const mix = (a, b, t) => a + (b - a) * t;
+  const stops = ["#1E4FD8", "#1FA0DC", "#9BE3F5", "#FFD08A", "#FF6A3D"].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  const grad = (t) => {
+    const x = clamp(t) * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(x)), f = x - i;
+    return `rgb(${stops[i].map((v, k) => Math.round(mix(v, stops[i + 1][k], f))).join(",")})`;
+  };
   const speed = [0.92, 0.84, 1, 0.88, 0.97, 0.86, 0.93, 0.9];
-  const segs = speed.map((_, i) => {
-    const s = document.createElement("div");
-    s.className = "seg"; s.style.setProperty("--i", i);
-    s.innerHTML = `<div class="lab">${String(i + 1).padStart(2, "0")} <span>${i * 75}–${i * 75 + 74}</span></div><div class="bar"><div class="fill"></div></div>`;
-    track.append(s);
-    return s;
+  const home = (i) => ({ x: 80 + i * 60, y: 330 });
+  const slot = (i) => ({ x: 125 + (i % 4) * 110, y: 110 + Math.floor(i / 4) * 72 });
+  const machG = document.getElementById("machines"), stripG = document.getElementById("strip");
+  const machines = speed.map((_, i) => {
+    const g = make("g", { transform: `translate(${111 + (i % 4) * 110} ${84 + Math.floor(i / 4) * 72})` }, machG);
+    make("rect", { width: 88, height: 64, rx: 10, class: "m-body" }, g);
+    make("rect", { x: 14, y: 26, width: 60, height: 28, rx: 3, class: "m-slot" }, g);
+    make("text", { x: 10, y: 17, class: "m-lab" }, g).textContent = String(i + 1).padStart(2, "0");
+    return { led: make("circle", { cx: 76, cy: 13, r: 3.5, class: "led" }, g), bar: make("rect", { x: 14, y: 57.5, width: 0, height: 2.5, rx: 1.25, class: "m-bar" }, g) };
   });
-  let lastStage = -1;
-  const drawPipe = (p) => {
-    const s = ease(range(p, 0.05, 0.26)) * (1 - ease(range(p, 0.72, 0.9)));
-    track.style.setProperty("--s", s.toFixed(4));
-    let total = 0;
-    segs.forEach((el, i) => {
-      const f = range(p, 0.3, 0.3 + 0.36 * speed[i]);
-      total += f * 75;
-      el.style.setProperty("--f", f.toFixed(4));
+  const segs = speed.map((_, i) => {
+    const g = make("g", {}, stripG);
+    make("rect", { width: 60, height: 28, rx: 3, class: "film" }, g);
+    make("rect", { width: 60, height: 28, fill: "url(#holes)" }, g);
+    const on = [0, 1, 2].map((k) => {
+      const n = i * 3 + k, fx = 1.5 + k * 20;
+      make("rect", { x: fx, y: 7, width: 17, height: 14, rx: 1.5, class: "f-empty" }, g);
+      const f = make("g", { opacity: 0 }, g);
+      make("rect", { x: fx, y: 7, width: 17, height: 14, rx: 1.5, fill: grad(n / 23) }, f);
+      make("circle", { cx: fx + 8.5, cy: 18.5 - 7.5 * Math.abs(Math.sin((Math.PI * n) / 6)), r: 2.2, fill: "#fff" }, f);
+      return f;
     });
-    frames.textContent = String(Math.round(total)).padStart(3, "0");
-    const stage = p < 0.29 ? 0 : p < 0.72 ? 1 : 2;
-    const done = p > 0.9;
-    viz.classList.toggle("done", done);
-    stampStart.classList.toggle("show", p < 0.04);
-    stampEnd.classList.toggle("show", done);
-    vizState.textContent = stage === 0 ? (s > 0.5 ? "8 pieces" : "1 video") : stage === 1 ? "8 machines rendering" : (done ? "1 MP4" : "joining");
-    if (stage !== lastStage) {
-      lastStage = stage;
-      stages.forEach((el, k) => el.classList.toggle("on", k === stage));
-      desc.textContent = stages[stage].querySelector("p").textContent;
+    return { g, on };
+  });
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage"), cam = $("cam"), say = $("say"), rail = $("rail"), railB = [...rail.querySelectorAll("button")], framesEl = $("frames");
+  const laptop = $("laptop"), heat = $("heat"), faceHot = $("faceHot"), faceCool = $("faceCool"), tLevel = $("tLevel"), tBulb = $("tBulb"), snow = $("snow"), file = $("file"), stripLab = $("stripLab");
+  const lines = [
+    "Normally your laptop renders every frame, one by one. It gets hot.",
+    "coldframe cuts your video into 8 pieces and sends them to the cloud.",
+    "8 GitHub machines render their piece at the same time.",
+    "The pieces come back and snap together, in order.",
+    "One MP4, every frame checked. Your laptop stayed cold.",
+  ];
+  // Phones: crop the empty sides of the scene so everything draws bigger.
+  const fitScene = () => stage.setAttribute("viewBox", innerWidth < 760 ? "62 0 516 600" : "0 0 640 600");
+  fitScene();
+  addEventListener("resize", fitScene);
+  let lastPhase = 0, sayTimer;
+  const drawScene = (p) => {
+    const intro = range(p, 0.02, 0.11), lift = range(p, 0.1, 0.14), reset = range(p, 0.12, 0.16), merge = ease(range(p, 0.86, 0.93));
+    let total = 0;
+    segs.forEach((sg, i) => {
+      const go = ease(range(p, 0.13 + i * 0.016, 0.24 + i * 0.016));
+      const back = ease(range(p, 0.66 + (7 - i) * 0.012, 0.77 + (7 - i) * 0.012));
+      const h = home(i), m = slot(i);
+      let x = mix(h.x + (i - 3.5) * 7 * lift * (1 - go), m.x, go);
+      let y = mix(h.y, m.y, go) - Math.sin(Math.PI * go) * 46;
+      let a = Math.sin(Math.PI * go) * (i - 3.5) * 4;
+      if (back > 0) {
+        x = mix(m.x, h.x, back);
+        y = mix(m.y, h.y, back) - Math.sin(Math.PI * back) * 40;
+        a = -Math.sin(Math.PI * back) * (i - 3.5) * 4;
+      }
+      const sc = 1 - 0.75 * merge;
+      x = mix(x, 290, merge); y = mix(y, 330, merge);
+      sg.g.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${a.toFixed(2)} 30 14) translate(${(30 * (1 - sc)).toFixed(2)} ${(14 * (1 - sc)).toFixed(2)}) scale(${sc.toFixed(3)})`);
+      sg.g.style.opacity = (1 - merge).toFixed(3);
+      const r = range(p, 0.31, 0.31 + 0.3 * speed[i]);
+      total += r * 75;
+      sg.on.forEach((f, k) => {
+        const byLaptop = i === 0 ? clamp(intro * 3 - k) * (1 - reset) : 0;
+        f.setAttribute("opacity", Math.max(byLaptop, clamp(r * 3 - k)).toFixed(3));
+      });
+      machines[i].bar.setAttribute("width", (60 * r).toFixed(2));
+      machines[i].led.setAttribute("class", r >= 1 ? "led done" : r > 0 ? "led busy" : "led");
+    });
+    framesEl.textContent = String(p < 0.12 ? Math.round(intro * 3) : Math.round(total)).padStart(3, "0");
+    stripLab.style.opacity = (1 - lift).toFixed(3);
+
+    const t = p < 0.12 ? mix(0.35, 0.95, intro) : mix(0.95, 0.12, range(p, 0.12, 0.3));
+    const tc = grad(mix(0.3, 1, range(t, 0.15, 0.95)));
+    stage.style.setProperty("--heat", clamp((t - 0.5) * 2).toFixed(3));
+    heat.style.opacity = range(t, 0.62, 0.9).toFixed(3);
+    faceHot.style.opacity = t > 0.6 ? 1 : 0;
+    laptop.classList.toggle("hot", !reduce && t > 0.8);
+    faceCool.style.opacity = t > 0.6 ? 0 : 1;
+    tLevel.setAttribute("y", (516 - 78 * t).toFixed(1));
+    tLevel.setAttribute("height", (78 * t + 6).toFixed(1));
+    tLevel.setAttribute("fill", tc); tBulb.setAttribute("fill", tc);
+    snow.style.opacity = range(p, 0.9, 0.96).toFixed(3);
+    const fl = range(p, 0.9, 0.97), fp = 1 + 2.70158 * Math.pow(fl - 1, 3) + 1.70158 * Math.pow(fl - 1, 2);
+    file.style.opacity = ease(fl).toFixed(3);
+    file.setAttribute("transform", `translate(320 345) scale(${mix(0.6, 1, fp).toFixed(3)}) translate(-320 -345)`);
+
+    const z = 1 + 0.07 * ease(range(p, 0.27, 0.36)) * (1 - ease(range(p, 0.6, 0.69)));
+    cam.setAttribute("transform", `translate(${(320 * (1 - z)).toFixed(2)} ${(150 * (1 - z)).toFixed(2)}) scale(${z.toFixed(4)})`);
+
+    rail.style.setProperty("--rp", p.toFixed(4));
+    const stg = p < 0.3 ? 0 : p < 0.66 ? 1 : 2;
+    railB.forEach((b, k) => { b.classList.toggle("on", k === stg); b.classList.toggle("past", k < stg); });
+    const ph = p < 0.12 ? 0 : p < 0.3 ? 1 : p < 0.66 ? 2 : p < 0.86 ? 3 : 4;
+    if (ph !== lastPhase) {
+      lastPhase = ph;
+      say.classList.add("out");
+      clearTimeout(sayTimer);
+      sayTimer = setTimeout(() => { say.textContent = lines[ph]; say.classList.remove("out"); }, reduce ? 0 : 220);
     }
   };
 
@@ -540,11 +881,16 @@
     links.forEach((a, i) => a.classList.toggle("on", i === cur));
     if (reduce) return;
     const sr = scrolly.getBoundingClientRect();
-    drawPipe(clamp(-sr.top / (sr.height - vh)));
+    drawScene(clamp(-sr.top / (sr.height - vh)));
   };
+  const jumps = [0.2, 0.46, 0.8];
+  railB.forEach((b, k) => b.addEventListener("click", () => {
+    const top = scrolly.getBoundingClientRect().top + scrollY;
+    scrollTo({ top: top + jumps[k] * (scrolly.offsetHeight - innerHeight), behavior: reduce ? "auto" : "smooth" });
+  }));
   addEventListener("scroll", () => { if (!queued) { queued = true; requestAnimationFrame(onScroll); } }, { passive: true });
   addEventListener("resize", onScroll);
-  if (reduce) drawPipe(0.66);
+  if (reduce) drawScene(0.5);
   onScroll();
 })();
 </script>
