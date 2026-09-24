@@ -32,7 +32,7 @@ Rendering a [Remotion](https://www.remotion.dev) video ties up your computer: fa
 2. **Render:** up to 20 GitHub machines each render one piece, all at the same time.
 3. **Stitch:** the pieces are joined without re-encoding, every frame is counted, and the MP4 comes back to your computer (and to Google Drive, if you want).
 
-The [launch film](docs/media/launch-film.mp4) above and the [demo on the website](https://razee4315.github.io/coldframe/) ([MP4](docs/media/demo.mp4)) are Remotion projects in [`example/`](example), rendered by coldframe on GitHub machines (12 and 8).
+The [launch film](docs/media/launch-film.mp4) above and the [20 s demo](docs/media/demo.mp4) are Remotion projects in [`example/`](example), rendered by coldframe on GitHub machines (12 and 8).
 
 <p align="center">
   <img src="docs/media/actions-run.png" alt="A real coldframe run: Plan, 8 chunks in parallel, then Stitch + deliver" width="520">
