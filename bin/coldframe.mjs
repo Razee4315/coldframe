@@ -232,6 +232,7 @@ function addFile(from, to = from) {
 
 /** The cloud renders what's on GitHub: stop if the branch isn't there, offer to push local commits. */
 async function checkPushed(ref) {
+  run("git", ["fetch", "-q", "origin", ref]); // refresh origin/<ref>; offline is fine, the checks below still work
   if (run("git", ["rev-parse", "--verify", "-q", `origin/${ref}`]).status !== 0) {
     die(`branch "${ref}" isn't on GitHub yet, so the cloud can't render it. Push it first:
     git push -u origin ${ref}`);
