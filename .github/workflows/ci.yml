@@ -34,7 +34,7 @@ jobs:
           # expect <exit code> <text in output> -- <args>
           expect() {
             code=$1; text=$2; shift 3
-            out=$(node "$CLI" "$@" 2>&1); got=$?
+            out=$(node "$CLI" "$@" 2>&1) && got=0 || got=$? # the step runs with -e
             [ "$got" = "$code" ] || fail "coldframe $* exited $got, expected $code: $out"
             case "$out" in *"$text"*) ;; *) fail "coldframe $* did not print \"$text\": $out" ;; esac
             echo "ok: coldframe $*"
