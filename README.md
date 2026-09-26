@@ -122,6 +122,7 @@ coldframe init                      only add the GitHub workflow file
   --out <dir>       where to save the MP4 (default out/cloud)
   --name <file>     output file name
   --no-wait         start the render and exit
+  --repo <o/r>      GitHub repo (default: the repo in this folder)
 ```
 
 Press Ctrl+C while it waits and the render keeps going; `coldframe download` fetches it later. You can also start a render from your repo's **Actions** tab → **coldframe** → **Run workflow**.

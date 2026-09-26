@@ -158,10 +158,6 @@ async function setup(opts) {
   ok("package.json and package-lock.json found");
 
   step(3, "GitHub repository");
-  if (!fs.existsSync(".git")) {
-    run("git", ["init", "-b", "main"]);
-    ok("created a git repository");
-  }
   let repo = currentRepo();
   if (!repo) {
     const name = path.basename(process.cwd()).toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
@@ -172,13 +168,28 @@ async function setup(opts) {
       die(`stopped: this project isn't on GitHub yet. Run setup again and answer public or private,
   or pass --public / --private (e.g. \`coldframe setup --private\`).`);
     }
+    // Only after the user said yes. A subfolder of an existing repo is not re-initialised.
+    if (run("git", ["rev-parse", "--is-inside-work-tree"]).status !== 0) {
+      run("git", ["init", "-b", "main"]);
+      ok("created a git repository");
+    }
     // Never upload node_modules or renders: they are huge and the cloud installs its own.
     if (!fs.existsSync(".gitignore")) {
       fs.writeFileSync(".gitignore", GITIGNORE);
       ok("added .gitignore (node_modules, out, build)");
+    } else if (fs.existsSync("node_modules") && run("git", ["check-ignore", "-q", "node_modules"]).status !== 0) {
+      fs.appendFileSync(".gitignore", "\nnode_modules/\n");
+      ok("added node_modules/ to .gitignore");
     }
     run("git", ["add", "-A"]);
-    run("git", ["commit", "-qm", "Initial commit"]);
+    const c = run("git", ["commit", "-qm", "Initial commit"]);
+    if (c.status !== 0 && !git(["rev-parse", "--verify", "-q", "HEAD"])) {
+      die(`git couldn't make the first commit:\n  ${(c.stderr || c.stdout).trim()}
+  If git asks who you are, run:
+    git config --global user.name "Your Name"
+    git config --global user.email "you@example.com"
+  then run setup again.`);
+    }
     gh(["repo", "create", name, vis.startsWith("pub") ? "--public" : "--private", "--source", ".", "--push"], { inherit: true });
     repo = currentRepo();
   }
@@ -308,6 +319,7 @@ function saveRender(repo, id, out = "out/cloud") {
   fs.mkdirSync(dir, { recursive: true });
   // gh refuses to overwrite, so download next to the target and move files in.
   const tmp = path.join(dir, `.coldframe-${id}`);
+  fs.rmSync(tmp, { recursive: true, force: true }); // left over from an interrupted download
   const saved = [];
   for (const name of names) {
     gh(["run", "download", id, "--repo", repo, "-n", name, "-D", tmp]);
