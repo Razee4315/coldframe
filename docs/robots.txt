@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://razee4315.github.io/coldframe/sitemap.xml
