@@ -48,9 +48,20 @@ jobs:
           expect 1 "--chunks must be a whole number" -- render Comp --chunks 50
           expect 1 "--props must be JSON" -- render Comp --props '{bad'
           expect 1 "--chunks needs a value" -- render Comp --chunks
+          expect 1 "unknown option --chunk." -- render Comp --chunk 4
+          expect 1 "isn't a run id" -- download nope
 
           # init copies the workflow into a fresh project, and leaves an existing one alone.
           dir=$(mktemp -d); cd "$dir"; echo '{}' > package.json
           expect 0 "added .github" -- init
           cmp .github/workflows/coldframe.yml "$GITHUB_WORKSPACE/templates/coldframe.yml" || fail "init copied the wrong file"
           expect 0 "already there" -- init
+
+          # --props reads a JSON file too.
+          echo '[1]' > props.json
+          expect 1 "--props must be a JSON object" -- render Comp --props props.json
+
+          # A project in a subfolder gets the workflow at the top of the repo, pointed at that folder.
+          dir=$(mktemp -d); cd "$dir"; git init -q; mkdir video; cd video; echo '{}' > package.json
+          expect 0 "added ../.github" -- init
+          grep -q '^      project-dir: video$' ../.github/workflows/coldframe.yml || fail "init did not set project-dir"

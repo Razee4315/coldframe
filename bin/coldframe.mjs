@@ -10,7 +10,7 @@
 //
 // render options:
 //   --chunks <n>      parallel machines (default 8, max 20)
-//   --props <json>    input props
+//   --props <json>    input props: JSON, or the path of a JSON file
 //   --ref <branch>    git branch to render (default: current branch)
 //   --out <dir>       where to save the MP4 (default out/cloud)
 //   --name <file>     output file name
@@ -44,8 +44,11 @@ function locate(name) {
 const tools = {};
 const tool = (name) => (name in tools ? tools[name] : (tools[name] = locate(name)));
 
-const run = (cmd, args, opts = {}) =>
-  spawnSync(tool(cmd) || cmd, args, { encoding: "utf8", stdio: opts.inherit ? "inherit" : "pipe", input: opts.input, shell: false });
+const run = (cmd, args, opts = {}) => {
+  const r = spawnSync(tool(cmd) || cmd, args, { encoding: "utf8", stdio: opts.inherit ? "inherit" : "pipe", input: opts.input, shell: false });
+  if (r.error && cmd === "git") die("git isn't installed. Get it from https://git-scm.com, then open a NEW terminal and run this again.");
+  return r;
+};
 const gh = (args, opts = {}) => {
   const r = run("gh", args, opts);
   if (r.error) die(`the GitHub CLI (gh) isn't installed. Install it with:
@@ -71,20 +74,25 @@ async function ask(question, fallback = "n") {
   return a || fallback;
 }
 
-/** --flag value, --flag=value, --no-flag; a flag with no value is `true`. */
+const VALUE_FLAGS = ["chunks", "props", "ref", "out", "name", "repo"];
+const SWITCHES = ["public", "private", "wait", "help", "version"];
+
+/** --flag value, --flag=value, --switch, --no-switch. A typo like --chunk stops here instead of being ignored. */
 function parse(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a.startsWith("--no-")) out[a.slice(5)] = false;
-    else if (a.startsWith("--")) {
-      const [k, v] = a.slice(2).split(/=(.*)/s);
-      if (v !== undefined) out[k] = v;
-      else if (i + 1 < argv.length && !argv[i + 1].startsWith("--")) out[k] = argv[++i];
-      else out[k] = true;
-    } else if (a === "-h") out.help = true;
+    if (a === "-h") out.help = true;
     else if (a === "-v") out.version = true;
-    else out._.push(a);
+    else if (a.startsWith("--")) {
+      const no = a.startsWith("--no-");
+      const [k, v] = a.slice(no ? 5 : 2).split(/=(.*)/s);
+      if (SWITCHES.includes(k) && v === undefined) out[k] = !no;
+      else if (!VALUE_FLAGS.includes(k) || no) die(`unknown option ${a.split("=")[0]}. See the options with: coldframe --help`);
+      else if (v !== undefined) out[k] = v;
+      else if (i + 1 < argv.length && !argv[i + 1].startsWith("--")) out[k] = argv[++i];
+      else die(`--${k} needs a value.`);
+    } else out._.push(a);
   }
   return out;
 }
@@ -111,7 +119,7 @@ function ensureGitHub() {
 
 /** Stop early, with a clear hint, when run outside a project (e.g. in C:\Windows\System32). */
 function requireProject() {
-  if (fs.existsSync("package.json") || git(["rev-parse", "--show-toplevel"])) return;
+  if (fs.existsSync("package.json") || (tool("git") && git(["rev-parse", "--show-toplevel"]))) return;
   const example = isWin ? 'cd "$HOME\\Desktop\\my-video"' : "cd ~/my-video";
   die(`run this inside your video project folder (the one with package.json).
   This terminal is in: ${process.cwd()}
@@ -196,22 +204,36 @@ async function setup(opts) {
   ok(`repository: ${repo}`);
 
   step(4, "Cloud render workflow and Claude Code files");
-  addFile(path.join("templates", WORKFLOW), path.join(".github", "workflows", WORKFLOW));
-  for (const skill of ["coldframe", "video-rules", "motion-direction", "sound-design"]) addFile(path.join(".claude", "skills", skill, "SKILL.md"));
+  const files = [addWorkflow()];
+  for (const skill of ["coldframe", "video-rules", "motion-direction", "sound-design"]) {
+    files.push(`.claude/skills/${skill}/SKILL.md`);
+    addFile(files.at(-1));
+  }
   // Sound-effect library (CC0) + Remotion helpers (<Sfx>, <MusicBed>), used by the sound-design skill.
-  for (const f of fs.readdirSync(path.join(PKG, "sfx"))) addFile(path.join("sfx", f), path.join("public", "sfx", f));
-  const soundFile = path.join("src", "coldframe-sound.tsx");
+  const sfx = fs.readdirSync(path.join(PKG, "sfx"));
+  const fresh = sfx.filter((f) => addFile(`sfx/${f}`, `public/sfx/${f}`, true)).length;
+  ok(fresh ? `added public/sfx/ (${fresh} files: the CC0 sound-effect library)` : "public/sfx/ (already there)");
+  files.push(...sfx.map((f) => `public/sfx/${f}`));
   if (fs.existsSync("src")) {
-    addFile(path.join("templates", "sound.tsx"), soundFile);
+    files.push("src/coldframe-sound.tsx");
+    addFile("templates/sound.tsx", files.at(-1));
     if (!deps["@remotion/media"]) console.log("  ! the sound helpers need @remotion/media: run `npx remotion add @remotion/media` before using them.");
   }
 
   step(5, "Push");
-  run("git", ["add", ".github", ".claude", path.join("public", "sfx"), ...(fs.existsSync(soundFile) ? [soundFile] : [])]);
-  if (run("git", ["diff", "--cached", "--quiet"]).status !== 0) {
-    run("git", ["commit", "-qm", "Add coldframe"]);
+  // Commit coldframe's own files and nothing else: not what you had staged, not the rest of .github or .claude.
+  const ignored = run("git", ["check-ignore", "--stdin", "-z"], { input: files.join("\0") }).stdout.split("\0").filter(Boolean);
+  if (ignored.includes(files[0])) die(`your .gitignore skips ${files[0]}, so GitHub would never get the render workflow. Remove that rule and run setup again.`);
+  if (ignored.length) console.log(`  ! your .gitignore skips ${ignored.length} of these files (${ignored[0]}${ignored.length > 1 ? ", ..." : ""}); they stay on this computer only.`);
+  const mine = files.filter((f) => !ignored.includes(f));
+  run("git", ["add", "--", ...mine]);
+  if (run("git", ["diff", "--cached", "--quiet", "--", ...mine]).status !== 0) {
+    const c = run("git", ["commit", "-qm", "Add coldframe", "--", ...mine]);
+    if (c.status !== 0) die(`git couldn't commit the coldframe files:\n  ${(c.stderr || c.stdout).trim()}`);
     const p = run("git", ["push", "-u", "origin", "HEAD"], { inherit: true });
-    if (p.status !== 0) die("push failed. Run `git push`, then render.");
+    if (p.status !== 0) die(`push failed. If GitHub refused the workflow file, let the GitHub CLI push workflows:
+    gh auth refresh --scopes workflow
+  then run \`git push\` and render.`);
     ok("pushed");
   } else ok("nothing new to push");
 
@@ -220,12 +242,40 @@ async function setup(opts) {
 `);
 }
 
-/** Copy a file from the coldframe package into this project, unless it already exists. */
-function addFile(from, to = from) {
-  if (fs.existsSync(to)) return ok(`${to} (already there)`);
-  fs.mkdirSync(path.dirname(to) || ".", { recursive: true });
-  fs.copyFileSync(path.join(PKG, from), to);
-  ok(`added ${to}`);
+/** Copy a file from the coldframe package into this project, unless it already exists. Returns true if it was added. */
+function addFile(from, to = from, quiet = false) {
+  const there = fs.existsSync(to);
+  if (!there) {
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    fs.copyFileSync(path.join(PKG, from), to);
+  }
+  if (!quiet) ok(there ? `${to} (already there)` : `added ${to}`);
+  return !there;
+}
+
+/**
+ * Add the render workflow and return its path. GitHub only reads workflows at the top of the
+ * repo, so a project in a subfolder gets the file up there, pointed back at this folder.
+ */
+function addWorkflow() {
+  const inRepo = tool("git") && git(["rev-parse", "--is-inside-work-tree"]) === "true";
+  const up = inRepo ? git(["rev-parse", "--show-cdup"]) : ""; // "" at the top, "../" one folder down
+  const dir = inRepo ? git(["rev-parse", "--show-prefix"]).replace(/\/$/, "") : ""; // this folder inside the repo
+  const to = `${up}.github/workflows/${WORKFLOW}`;
+  if (fs.existsSync(to)) {
+    ok(`${to} (already there)`);
+    return to;
+  }
+  let yml = fs.readFileSync(path.join(PKG, "templates", WORKFLOW), "utf8");
+  if (dir) {
+    const line = /^( *)# project-dir: .*$/m;
+    if (!line.test(yml)) die("the workflow template has no project-dir line. Please report it: https://github.com/Razee4315/coldframe/issues");
+    yml = yml.replace(line, (_, indent) => `${indent}project-dir: ${/^[\w./-]+$/.test(dir) ? dir : JSON.stringify(dir)}`);
+  }
+  fs.mkdirSync(path.dirname(to), { recursive: true });
+  fs.writeFileSync(to, yml);
+  ok(`added ${to}${dir ? ` (renders the project in ${dir}/)` : ""}`);
+  return to;
 }
 
 /* ---------------- render ---------------- */
@@ -244,7 +294,25 @@ async function checkPushed(ref) {
       if (run("git", ["push", "origin", `HEAD:${ref}`], { inherit: true }).status !== 0) die("push failed. Run `git push`, then render again.");
     } else console.warn(`! ${ahead} local commit(s) not pushed; the cloud renders origin/${ref}.`);
   }
-  if (git(["status", "--porcelain", "--untracked-files=no"])) console.warn("! Uncommitted changes are not included in the cloud render.");
+  // New files count too: a scene or a music file that was never committed is missing in the cloud.
+  const dirty = git(["status", "--porcelain", "--", "."]).split(/\r?\n/).filter(Boolean).map((l) => l.trim().replace(/^\S+\s+/, ""));
+  if (dirty.length) {
+    console.warn(`! ${dirty.length} changed or new file(s) here aren't committed, so the cloud render won't have them:
+    ${dirty.slice(0, 5).join(", ")}${dirty.length > 5 ? ", ..." : ""}`);
+  }
+}
+
+/** --props takes JSON or, like Remotion, the path of a JSON file (no fighting PowerShell over quotes). */
+function readProps(value) {
+  const isFile = fs.existsSync(value) && fs.statSync(value).isFile();
+  let props;
+  try {
+    props = JSON.parse(isFile ? fs.readFileSync(value, "utf8").replace(/^\uFEFF/, "") : value);
+  } catch {
+    die(isFile ? `${value} isn't valid JSON.` : `--props must be JSON or the path of a JSON file, for example: --props '{"title":"Hello"}' or --props props.json`);
+  }
+  if (!props || typeof props !== "object" || Array.isArray(props)) die(`--props must be a JSON object, like {"title":"Hello"}.`);
+  return JSON.stringify(props);
 }
 
 async function render(opts) {
@@ -252,33 +320,42 @@ async function render(opts) {
   if (!comp) die("usage: coldframe render <CompositionId> [--chunks 8]");
   const chunks = opts.chunks === undefined ? 8 : Number(opts.chunks);
   if (!Number.isInteger(chunks) || chunks < 1 || chunks > 20) die("--chunks must be a whole number from 1 to 20.");
-  if (opts.props !== undefined) {
-    try {
-      JSON.parse(opts.props);
-    } catch {
-      die(`--props must be JSON, for example: --props '{"title":"Hello"}'`);
-    }
-  }
+  const props = opts.props === undefined ? "" : readProps(opts.props);
   const repo = targetRepo(opts);
 
-  let ref = typeof opts.ref === "string" ? opts.ref : git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  // With --repo this folder says nothing about the branch, so use that repo's default one.
+  let ref = opts.ref || (opts.repo ? gh(["repo", "view", repo, "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name"]) : git(["rev-parse", "--abbrev-ref", "HEAD"]));
   if (ref === "HEAD") die("this checkout isn't on a branch. Switch to one, or pass --ref <branch>.");
   ref ||= "main";
   if (!opts.repo && !opts.ref) await checkPushed(ref);
 
   const fields = ["-f", `composition=${comp}`, "-f", `chunks=${chunks}`];
-  if (opts.props) fields.push("-f", `props=${opts.props}`);
+  if (props) fields.push("-f", `props=${props}`);
   if (opts.name) fields.push("-f", `output-name=${opts.name}`);
 
   // Remember the runs that already exist, so the new one is found without trusting clocks.
+  // GitHub only starts a workflow that is on the repo's default branch; say so instead of a bare "HTTP 404".
+  const ghOrExplain = (args) => {
+    const r = run("gh", args);
+    if (r.status === 0) return r.stdout || "";
+    const why = (r.stderr || r.stdout || "").trim();
+    die(
+      /HTTP 404/.test(why)
+        ? `${repo} has no coldframe workflow on its default branch, so GitHub can't start the render.
+  Run \`npx github:Razee4315/coldframe setup\` in the project. If you set it up on another branch, merge that branch first.`
+        : why || "couldn't start the render.",
+    );
+  };
   const listRuns = () =>
-    JSON.parse(gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--event", "workflow_dispatch", "--limit", "10", "--json", "databaseId,headBranch,url"]));
+    JSON.parse(ghOrExplain(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--event", "workflow_dispatch", "--limit", "10", "--json", "databaseId,headBranch,url"]));
   const before = new Set(listRuns().map((r) => r.databaseId));
   const t0 = Date.now();
-  gh(["workflow", "run", WORKFLOW, "--repo", repo, "--ref", ref, ...fields]);
+  const started = ghOrExplain(["workflow", "run", WORKFLOW, "--repo", repo, "--ref", ref, ...fields]);
   console.log(`Started ${comp} on ${repo}@${ref} across up to ${chunks} machines.`);
 
-  let found;
+  // Newer versions of gh print the address of the run they started; older ones need a look at the run list.
+  const url = started.match(/https:\/\/\S+\/actions\/runs\/(\d+)/);
+  let found = url && { databaseId: url[1], url: url[0] };
   for (let i = 0; i < 30 && !found; i++) {
     await sleep(2000);
     found = listRuns().find((r) => !before.has(r.databaseId) && r.headBranch === ref);
@@ -289,13 +366,22 @@ async function render(opts) {
   if (opts.wait === false) return console.log(`When it's done: coldframe download ${id}`);
 
   // Ctrl+C stops waiting, not the render.
-  process.on("SIGINT", () => {});
-  gh(["run", "watch", id, "--repo", repo, "--exit-status", "--interval", "10"], { inherit: true, allowFail: true });
-  const info = JSON.parse(gh(["run", "view", id, "--repo", repo, "--json", "status,conclusion"]));
-  if (info.status !== "completed") {
-    console.log(`\nStopped waiting. The render keeps going in the cloud. Get the MP4 later with:
+  let stopped = false;
+  process.on("SIGINT", () => (stopped = true));
+  // A dropped connection ends `gh run watch` too, so look again a few times before giving up.
+  let info;
+  for (let tries = 0; ; tries++) {
+    gh(["run", "watch", id, "--repo", repo, "--exit-status", "--interval", "10"], { inherit: true, allowFail: true });
+    const view = run("gh", ["run", "view", id, "--repo", repo, "--json", "status,conclusion"]);
+    info = view.status === 0 ? JSON.parse(view.stdout) : null;
+    if (info?.status === "completed" || stopped || tries >= 5) break;
+    console.log("\nLost the connection to GitHub. Trying again in 15 seconds...");
+    await sleep(15000);
+  }
+  if (info?.status !== "completed") {
+    console.log(`\n${stopped ? "Stopped waiting." : "Can't reach GitHub right now."} The render keeps going in the cloud. Get the MP4 later with:
     coldframe download ${id}`);
-    process.exit(0);
+    process.exit(stopped ? 0 : 1);
   }
   if (info.conclusion !== "success") die(`render ${info.conclusion}. See what went wrong with:
     gh run view ${id} --repo ${repo} --log-failed
@@ -325,8 +411,13 @@ function saveRender(repo, id, out = "out/cloud") {
   for (const name of names) {
     gh(["run", "download", id, "--repo", repo, "-n", name, "-D", tmp]);
     for (const f of fs.readdirSync(tmp)) {
-      fs.renameSync(path.join(tmp, f), path.join(dir, f));
-      saved.push(path.relative(".", path.join(dir, f)));
+      const to = path.relative(".", path.join(dir, f));
+      try {
+        fs.renameSync(path.join(tmp, f), to);
+      } catch (e) {
+        die(`couldn't replace ${to} (${e.code}). Close it if it's open in a player, then run: coldframe download ${id}`);
+      }
+      saved.push(to);
     }
   }
   fs.rmSync(tmp, { recursive: true, force: true });
@@ -334,9 +425,11 @@ function saveRender(repo, id, out = "out/cloud") {
 }
 
 function download(opts) {
+  // A run id, or the address of the run's page (.../actions/runs/123).
+  const given = opts._[1] && (opts._[1].match(/^(?:.*\/runs\/)?(\d+)(?:[/?#].*)?$/)?.[1] || die(`"${opts._[1]}" isn't a run id. See your renders with \`coldframe runs\`.`));
   const repo = targetRepo(opts);
   const id =
-    opts._[1] ||
+    given ||
     gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--status", "success", "--limit", "1", "--json", "databaseId", "--jq", ".[0].databaseId"]) ||
     die("no finished renders yet. Start one with `coldframe render <CompositionId>`.");
   console.log(`Saved ${saveRender(repo, String(id), opts.out).join(", ")}`);
@@ -344,7 +437,7 @@ function download(opts) {
 
 function init() {
   if (!fs.existsSync("package.json")) console.warn("! No package.json here. Run this in your Remotion project root.");
-  addFile(path.join("templates", WORKFLOW), path.join(".github", "workflows", WORKFLOW));
+  addWorkflow();
   console.log("Commit and push it, then: coldframe render <CompositionId>");
 }
 
@@ -359,7 +452,6 @@ function help() {
 
 const opts = parse(process.argv.slice(2));
 const cmd = opts._[0];
-for (const k of ["chunks", "props", "ref", "out", "name", "repo"]) if (opts[k] === true) die(`--${k} needs a value.`);
 if (opts.version) console.log(JSON.parse(fs.readFileSync(path.join(PKG, "package.json"), "utf8")).version);
 else if (opts.help || cmd === "help") help();
 else if (cmd === "setup") await setup(opts);

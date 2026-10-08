@@ -33,6 +33,6 @@ Requirements: `npx github:Razee4315/coldframe setup` has been run once in the Re
 
 Chunks: about one machine per 5–10 s of video, max 20. Each machine spends ~40 s getting ready, so short videos gain little from more chunks.
 
-Useful inputs: `--props '<json>'`, `--name file.mp4`, `--ref <branch>`, `--chunks <n>`.
+Useful inputs: `--props '<json>'` or `--props props.json` (a file avoids quoting trouble in PowerShell), `--name file.mp4`, `--ref <branch>`, `--chunks <n>`.
 WebGL / three.js renders with `--gl=swangle` on CPU runners (the workflow default). It works but is slow; render heavy 3D shots once on a local GPU and use them as clips.
 A stuck machine is stopped after `chunk-timeout` minutes (default 60); raise it in `.github/workflows/coldframe.yml` for very long 3D renders.

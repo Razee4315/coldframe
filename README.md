@@ -117,7 +117,7 @@ coldframe runs                      list recent cloud renders
 coldframe init                      only add the GitHub workflow file
 
   --chunks <n>      parallel machines (default 8, max 20)
-  --props <json>    input props
+  --props <json>    input props: JSON, or the path of a JSON file
   --ref <branch>    git branch to render (default: current branch)
   --out <dir>       where to save the MP4 (default out/cloud)
   --name <file>     output file name
@@ -135,7 +135,7 @@ Press Ctrl+C while it waits and the render keeps going; `coldframe download` fet
 |---|---|---|
 | `composition` | (required) | Composition id to render |
 | `chunks` | `8` | Parallel machines, 1–20 |
-| `project-dir` | `.` | Folder with the Remotion `package.json` |
+| `project-dir` | `.` | Folder with the Remotion `package.json`. `setup` fills it in when your project sits in a subfolder of the repo |
 | `props` | `{}` | Input props as JSON |
 | `output-name` | `<comp>-<run>.mp4` | Name of the final file |
 | `gl` | `swangle` | Chrome's OpenGL backend. `swangle` runs WebGL on machines without a GPU |
